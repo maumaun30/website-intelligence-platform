@@ -311,13 +311,15 @@ onlyBuiltDependencies:
     "module": "CommonJS",
     "moduleResolution": "Node",
     "lib": ["ES2023"],
-    "outDir": "dist",
-    "rootDir": "src",
+    "outDir": "${configDir}/dist",
+    "rootDir": "${configDir}/src",
     "types": ["node"]
   },
   "exclude": ["node_modules", "dist"]
 }
 ```
+
+`${configDir}` is required here, not decoration. A plain relative `"outDir": "dist"` resolves against the file that *declares* it — this preset — so every consuming package would emit into `packages/tsconfig/dist` and typecheck would fail with `TS6059`. `${configDir}` (TypeScript 5.5+) defers resolution to the config that ultimately extends it.
 
 Tests live in `src` and are intentionally **not** excluded here — `typecheck` must cover them. Each package adds a `tsconfig.build.json` that excludes `src/**/*.test.ts` from emit.
 
@@ -473,15 +475,20 @@ export default [
 
 - [ ] **Step 6: Create the root ESLint config**
 
-`eslint.config.mjs` — only lints repo-level files; each package lints itself.
+`eslint.config.mjs`:
 ```js
 import base from '@wintel/eslint-config';
 
-export default [
-  ...base,
-  { ignores: ['apps/**', 'packages/**'] },
-];
+// This is the config ESLint finds when it is invoked from the repo root — which is how
+// lint-staged runs on commit. It therefore has to cover apps/ and packages/ too, or staged
+// files inside a workspace package would be silently skipped by the pre-commit gate.
+//
+// Framework-specific rules (React, Next, NestJS) live in each package's own eslint.config.mjs
+// and run under `pnpm lint`, which invokes ESLint from inside each package.
+export default base;
 ```
+
+Do **not** add `{ ignores: ['apps/**', 'packages/**'] }` here. It reads as "each package lints itself", but lint-staged passes absolute paths to ESLint from the repo root, so those ignores would silently drop every staged file in a workspace package and the pre-commit gate would pass on code it never looked at.
 
 - [ ] **Step 7: Install and verify the workspace resolves**
 

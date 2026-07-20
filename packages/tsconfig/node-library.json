@@ -6,8 +6,8 @@
     "module": "CommonJS",
     "moduleResolution": "Node",
     "lib": ["ES2023"],
-    "outDir": "dist",
-    "rootDir": "src",
+    "outDir": "${configDir}/dist",
+    "rootDir": "${configDir}/src",
     "types": ["node"]
   },
   "exclude": ["node_modules", "dist"]
