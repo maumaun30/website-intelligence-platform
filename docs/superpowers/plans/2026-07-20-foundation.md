@@ -616,7 +616,7 @@ Give every developer (and CI) a one-command Postgres, Redis, and mail catcher.
 
 **Files:**
 - Create: `docker-compose.yml`, `.env.example`, `README.md`
-- Modify: `package.json` (add `db:*` and `infra:*` scripts)
+- Modify: `package.json` (add the `infra:*` scripts; the `db:*` scripts arrive in Task 6)
 
 **Interfaces:**
 - Consumes: nothing from earlier tasks.
