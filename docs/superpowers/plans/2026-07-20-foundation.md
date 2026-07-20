@@ -175,6 +175,10 @@ coverage
 .turbo
 pnpm-lock.yaml
 packages/database/generated
+
+# Workflow artifacts, not source. Reformatting them only produces churn.
+.superpowers
+docs/superpowers
 ```
 
 - [ ] **Step 2: Create the workspace root manifest and pnpm workspace file**
@@ -270,6 +274,7 @@ onlyBuiltDependencies:
   "name": "@wintel/tsconfig",
   "version": "0.0.0",
   "private": true,
+  "engines": { "node": ">=22.0.0 <23" },
   "files": ["base.json", "node-library.json", "nest.json", "react-library.json", "next.json"]
 }
 ```
@@ -384,6 +389,7 @@ Tests live in `src` and are intentionally **not** excluded here — `typecheck` 
   "name": "@wintel/eslint-config",
   "version": "0.0.0",
   "private": true,
+  "engines": { "node": ">=22.0.0 <23" },
   "type": "module",
   "exports": {
     ".": "./base.js",

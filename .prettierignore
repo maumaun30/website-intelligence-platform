@@ -5,3 +5,7 @@ coverage
 .turbo
 pnpm-lock.yaml
 packages/database/generated
+
+# Workflow artifacts, not source. Reformatting them only produces churn.
+.superpowers
+docs/superpowers
