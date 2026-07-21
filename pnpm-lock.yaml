@@ -90,6 +90,31 @@ importers:
 
   packages/tsconfig: {}
 
+  packages/types:
+    dependencies:
+      zod:
+        specifier: ^4.0.0
+        version: 4.4.3
+    devDependencies:
+      '@types/node':
+        specifier: ^22.15.0
+        version: 22.20.1
+      '@wintel/eslint-config':
+        specifier: workspace:*
+        version: link:../eslint-config
+      '@wintel/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+      eslint:
+        specifier: ^9.30.0
+        version: 9.39.5(jiti@2.6.1)
+      typescript:
+        specifier: ^5.8.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.0
+        version: 3.2.7(@types/node@22.20.1)(jiti@2.6.1)(yaml@2.9.0)
+
 packages:
 
   '@babel/code-frame@7.29.7':
