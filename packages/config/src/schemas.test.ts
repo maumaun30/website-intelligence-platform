@@ -60,4 +60,10 @@ describe('workerEnvSchema', () => {
 
     expect(env.WORKER_CONCURRENCY).toBe(12);
   });
+
+  it('rejects an out-of-range WORKER_CONCURRENCY', () => {
+    expect(() => loadEnv(workerEnvSchema, { ...validInfra, WORKER_CONCURRENCY: '200' })).toThrow(
+      /WORKER_CONCURRENCY/,
+    );
+  });
 });
