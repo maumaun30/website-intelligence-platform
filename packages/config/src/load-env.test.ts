@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
 import { EnvValidationError } from './errors';
@@ -11,6 +11,17 @@ const schema = z.object({
 });
 
 describe('loadEnv', () => {
+  const envSnapshot = { ...process.env };
+
+  afterEach(() => {
+    for (const key of Object.keys(process.env)) {
+      if (!(key in envSnapshot)) {
+        delete process.env[key];
+      }
+    }
+    Object.assign(process.env, envSnapshot);
+  });
+
   it('returns the parsed value when the source is valid', () => {
     const result = loadEnv(schema, { REQUIRED_VALUE: 'present', SECOND_VALUE: 'also-present' });
 
@@ -46,7 +57,5 @@ describe('loadEnv', () => {
 
     expect(result.REQUIRED_VALUE).toBe('from-process-env');
     expect(result.SECOND_VALUE).toBe('second-from-process-env');
-    delete process.env.REQUIRED_VALUE;
-    delete process.env.SECOND_VALUE;
   });
 });
