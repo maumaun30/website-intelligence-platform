@@ -18,7 +18,12 @@
     "prepare": "husky",
     "infra:up": "docker compose up -d --wait",
     "infra:down": "docker compose down",
-    "infra:reset": "docker compose down -v && docker compose up -d --wait"
+    "infra:reset": "docker compose down -v && docker compose up -d --wait",
+    "db:generate": "pnpm --filter @wintel/database run db:generate",
+    "db:migrate": "pnpm --filter @wintel/database run db:migrate",
+    "db:migrate:dev": "pnpm --filter @wintel/database run db:migrate:dev",
+    "db:reset": "pnpm --filter @wintel/database run db:reset",
+    "db:studio": "pnpm --filter @wintel/database run db:studio"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.1",
