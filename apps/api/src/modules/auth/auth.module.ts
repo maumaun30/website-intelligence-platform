@@ -5,11 +5,14 @@ import { EMAIL_QUEUE } from '@wintel/types';
 
 import { API_ENV } from '../../config/api-config.module';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
+import { AUTH_INSTANCE } from './auth.tokens';
 import { type Auth, createAuth } from './create-auth';
 import { EmailQueueService } from './email-queue.service';
+import { MeController } from './me.controller';
+import { RolesGuard } from './roles.guard';
+import { SessionGuard } from './session.guard';
 
-/** Injection token for the configured Better Auth server instance. */
-export const AUTH_INSTANCE = Symbol('AUTH_INSTANCE');
+export { AUTH_INSTANCE } from './auth.tokens';
 
 /**
  * Wires Better Auth into the application: the BullMQ connection and email queue it enqueues onto,
@@ -31,8 +34,11 @@ export const AUTH_INSTANCE = Symbol('AUTH_INSTANCE');
     }),
     BullModule.registerQueue({ name: EMAIL_QUEUE }),
   ],
+  controllers: [MeController],
   providers: [
     EmailQueueService,
+    SessionGuard,
+    RolesGuard,
     {
       provide: AUTH_INSTANCE,
       inject: [API_ENV, PrismaService, EmailQueueService],
@@ -44,6 +50,6 @@ export const AUTH_INSTANCE = Symbol('AUTH_INSTANCE');
         }),
     },
   ],
-  exports: [AUTH_INSTANCE, EmailQueueService],
+  exports: [AUTH_INSTANCE, EmailQueueService, SessionGuard, RolesGuard],
 })
 export class AuthModule {}

@@ -67,3 +67,19 @@ describe('error shaping', () => {
     expect(response.status).toBe(404);
   });
 });
+
+describe('authentication', () => {
+  it('rejects an unauthenticated request to a protected route with 401', async () => {
+    const response = await request(app.getHttpServer()).get('/api/v1/me');
+
+    expect(response.status).toBe(401);
+  });
+
+  it('mounts the Better Auth handler under the version prefix', async () => {
+    const response = await request(app.getHttpServer()).get('/api/v1/auth/get-session');
+
+    // No cookie means no session, but the handler answers (200 with an empty body) rather than
+    // falling through to Nest's 404 — proving it is mounted at the right path.
+    expect(response.status).toBe(200);
+  });
+});
