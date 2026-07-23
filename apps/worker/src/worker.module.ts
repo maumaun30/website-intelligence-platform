@@ -4,7 +4,9 @@ import type { WorkerEnv } from '@wintel/config';
 import { LoggerModule } from 'nestjs-pino';
 
 import { WorkerConfigModule } from './config/worker-config.module';
+import { MailerModule } from './infrastructure/mailer/mailer.module';
 import { RedisModule } from './infrastructure/redis/redis.module';
+import { EmailModule } from './queues/email/email.module';
 import { ExampleModule } from './queues/example/example.module';
 
 @Module({})
@@ -38,6 +40,8 @@ export class WorkerModule {
           },
         }),
         RedisModule,
+        MailerModule,
+        EmailModule,
         ExampleModule,
       ],
     };
