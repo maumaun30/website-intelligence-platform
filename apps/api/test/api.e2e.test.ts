@@ -9,7 +9,13 @@ import { createApiApp } from '../src/create-app';
 let app: INestApplication;
 
 beforeAll(async () => {
-  const env = loadEnv(apiEnvSchema, { ...process.env, NODE_ENV: 'test', LOG_LEVEL: 'error' });
+  const env = loadEnv(apiEnvSchema, {
+    ...process.env,
+    NODE_ENV: 'test',
+    LOG_LEVEL: 'error',
+    BETTER_AUTH_SECRET:
+      process.env.BETTER_AUTH_SECRET ?? 'test-secret-that-is-at-least-32-characters-long',
+  });
   app = await createApiApp(env);
   await app.init();
 });
