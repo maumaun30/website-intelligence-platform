@@ -1,0 +1,15 @@
+{
+  "name": "@wintel/tsconfig",
+  "version": "0.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=22.0.0 <23"
+  },
+  "files": [
+    "base.json",
+    "node-library.json",
+    "nest.json",
+    "react-library.json",
+    "next.json"
+  ]
+}

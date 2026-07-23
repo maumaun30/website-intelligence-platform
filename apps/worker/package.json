@@ -1,0 +1,44 @@
+{
+  "name": "@wintel/worker",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=22.0.0 <23"
+  },
+  "scripts": {
+    "build": "nest build",
+    "dev": "nest start --watch",
+    "start": "node dist/main.js",
+    "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "clean": "rm -rf dist .turbo"
+  },
+  "dependencies": {
+    "@nestjs/bullmq": "^11.0.0",
+    "@nestjs/common": "^11.1.0",
+    "@nestjs/core": "^11.1.0",
+    "@wintel/config": "workspace:*",
+    "@wintel/database": "workspace:*",
+    "bullmq": "^5.56.0",
+    "ioredis": "^5.6.0",
+    "nestjs-pino": "^4.4.0",
+    "pino": "^9.7.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^11.0.0",
+    "@nestjs/schematics": "^11.0.0",
+    "@nestjs/testing": "^11.1.0",
+    "@swc/core": "^1.12.0",
+    "@types/node": "^22.15.0",
+    "@wintel/eslint-config": "workspace:*",
+    "@wintel/tsconfig": "workspace:*",
+    "eslint": "^9.30.0",
+    "pino-pretty": "^13.0.0",
+    "typescript": "^5.8.0",
+    "unplugin-swc": "^1.5.0",
+    "vitest": "^3.2.0"
+  }
+}

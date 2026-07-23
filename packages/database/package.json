@@ -1,0 +1,37 @@
+{
+  "name": "@wintel/database",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "engines": {
+    "node": ">=22.0.0 <23"
+  },
+  "scripts": {
+    "build": "pnpm run db:generate && tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
+    "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "clean": "rm -rf dist generated .turbo",
+    "db:generate": "dotenv -e ../../.env -- prisma generate",
+    "db:migrate": "dotenv -e ../../.env -- prisma migrate deploy",
+    "db:migrate:dev": "dotenv -e ../../.env -- prisma migrate dev",
+    "db:reset": "dotenv -e ../../.env -- prisma migrate reset --force",
+    "db:studio": "dotenv -e ../../.env -- prisma studio"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.11.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "@wintel/config": "workspace:*",
+    "@wintel/eslint-config": "workspace:*",
+    "@wintel/tsconfig": "workspace:*",
+    "dotenv-cli": "^8.0.0",
+    "eslint": "^9.30.0",
+    "prisma": "^6.11.0",
+    "typescript": "^5.8.0",
+    "vitest": "^3.2.0"
+  }
+}
