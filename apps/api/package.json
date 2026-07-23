@@ -16,12 +16,15 @@
     "clean": "rm -rf dist .turbo"
   },
   "dependencies": {
+    "@nestjs/bullmq": "^11.0.4",
     "@nestjs/common": "^11.1.0",
     "@nestjs/core": "^11.1.0",
     "@nestjs/platform-express": "^11.1.0",
     "@wintel/config": "workspace:*",
     "@wintel/database": "workspace:*",
     "@wintel/types": "workspace:*",
+    "better-auth": "1.6.24",
+    "bullmq": "^5.80.10",
     "ioredis": "^5.6.0",
     "nestjs-pino": "^4.4.0",
     "pino": "^9.7.0",

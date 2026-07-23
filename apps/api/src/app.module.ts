@@ -8,6 +8,7 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { ApiConfigModule } from './config/api-config.module';
 import { PrismaModule } from './infrastructure/prisma/prisma.module';
 import { RedisModule } from './infrastructure/redis/redis.module';
+import { AuthModule } from './modules/auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
 
 @Module({})
@@ -45,6 +46,7 @@ export class AppModule {
         }),
         PrismaModule,
         RedisModule,
+        AuthModule,
         HealthModule,
       ],
       providers: [AllExceptionsFilter],
