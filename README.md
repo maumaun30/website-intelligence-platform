@@ -1,5 +1,7 @@
 # Website Intelligence Platform
 
+[![CI](https://github.com/maumaun30/website-intelligence-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/maumaun30/website-intelligence-platform/actions/workflows/ci.yml)
+
 AI-powered platform that continuously monitors websites and helps agencies, developers, and
 businesses identify, prioritize, and resolve technical issues.
 
