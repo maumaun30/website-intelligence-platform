@@ -23,6 +23,8 @@ export type {
   SignUpInput,
   User,
 } from './auth';
+export { EMAIL_QUEUE, emailJobSchema } from './email-jobs';
+export type { EmailJob, EmailJobType } from './email-jobs';
 export {
   DEPENDENCY_STATUSES,
   OVERALL_HEALTH_STATUSES,
