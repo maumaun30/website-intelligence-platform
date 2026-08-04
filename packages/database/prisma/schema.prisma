@@ -8,6 +8,23 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum VerificationStatus {
+  pending
+  verified
+  failed
+}
+
+enum VerificationMethod {
+  dns
+  meta
+}
+
+enum ScanFrequency {
+  manual
+  daily
+  weekly
+}
+
 // Authentication and organization models. These are owned by Better Auth (core tables plus the
 // organization plugin) — field names, relations, and the lowercase table mappings match what its
 // Prisma adapter expects, so they are derived from Better Auth's schema rather than invented here.
@@ -26,6 +43,7 @@ model User {
   accounts    Account[]
   members     Member[]
   invitations Invitation[]
+  websites    Website[]
 
   @@unique([email])
   @@map("user")
@@ -92,6 +110,7 @@ model Organization {
 
   members     Member[]
   invitations Invitation[]
+  websites    Website[]
 
   @@unique([slug])
   @@map("organization")
@@ -126,4 +145,32 @@ model Invitation {
   @@index([organizationId])
   @@index([email])
   @@map("invitation")
+}
+
+model Website {
+  id                 String              @id @default(uuid())
+  organizationId     String
+  createdById        String
+  name               String
+  url                String
+  domain             String
+  verificationStatus VerificationStatus  @default(pending)
+  verificationMethod VerificationMethod?
+  verificationToken  String
+  verifiedAt         DateTime?
+  maxDepth           Int                 @default(3)
+  maxPages           Int                 @default(500)
+  includePaths       String[]            @default([])
+  excludePaths       String[]            @default([])
+  scanFrequency      ScanFrequency       @default(manual)
+  respectRobotsTxt   Boolean             @default(true)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy    User         @relation(fields: [createdById], references: [id])
+
+  @@unique([organizationId, domain])
+  @@index([organizationId])
+  @@map("website")
 }
