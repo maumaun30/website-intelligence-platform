@@ -37,3 +37,23 @@ export type {
   HealthCheckResponse,
   OverallHealthStatus,
 } from './health';
+export {
+  SCAN_FREQUENCIES,
+  VERIFICATION_METHODS,
+  VERIFICATION_STATUSES,
+  createWebsiteInputSchema,
+  scanConfigSchema,
+  updateWebsiteInputSchema,
+  verifyWebsiteInputSchema,
+  websiteSchema,
+} from './website';
+export type {
+  CreateWebsiteInput,
+  ScanConfig,
+  ScanFrequency,
+  UpdateWebsiteInput,
+  VerificationMethod,
+  VerificationStatus,
+  VerifyWebsiteInput,
+  Website,
+} from './website';
