@@ -57,3 +57,5 @@ export type {
   VerifyWebsiteInput,
   Website,
 } from './website';
+export { WEBSITE_VERIFY_QUEUE, websiteVerifyJobSchema } from './website-jobs';
+export type { WebsiteVerifyJob } from './website-jobs';
