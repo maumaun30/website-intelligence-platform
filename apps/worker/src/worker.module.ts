@@ -9,6 +9,7 @@ import { PrismaModule } from './infrastructure/prisma/prisma.module';
 import { RedisModule } from './infrastructure/redis/redis.module';
 import { EmailModule } from './queues/email/email.module';
 import { ExampleModule } from './queues/example/example.module';
+import { WebsiteVerifyModule } from './queues/website-verify/website-verify.module';
 
 @Module({})
 export class WorkerModule {
@@ -44,6 +45,7 @@ export class WorkerModule {
         PrismaModule,
         MailerModule,
         EmailModule,
+        WebsiteVerifyModule,
         ExampleModule,
       ],
     };
