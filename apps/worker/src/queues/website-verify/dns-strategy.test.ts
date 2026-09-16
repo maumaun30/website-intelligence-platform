@@ -34,10 +34,30 @@ describe('DnsVerificationStrategy', () => {
     expect(await strategy.verify(job)).toBe(false);
   });
 
-  it('propagates an infra error (does not swallow to false)', async () => {
-    const resolveTxt = vi.fn().mockRejectedValue(new Error('ENOTFOUND'));
+  it('returns false when the domain has no TXT records at all', async () => {
+    const resolveTxt = vi
+      .fn()
+      .mockRejectedValue(Object.assign(new Error('queryTxt ENODATA'), { code: 'ENODATA' }));
     const strategy = new DnsVerificationStrategy(resolveTxt);
 
-    await expect(strategy.verify(job)).rejects.toThrow('ENOTFOUND');
+    expect(await strategy.verify(job)).toBe(false);
+  });
+
+  it('returns false when the domain does not exist', async () => {
+    const resolveTxt = vi
+      .fn()
+      .mockRejectedValue(Object.assign(new Error('queryTxt ENOTFOUND'), { code: 'ENOTFOUND' }));
+    const strategy = new DnsVerificationStrategy(resolveTxt);
+
+    expect(await strategy.verify(job)).toBe(false);
+  });
+
+  it('propagates an infra error (does not swallow to false)', async () => {
+    const resolveTxt = vi
+      .fn()
+      .mockRejectedValue(Object.assign(new Error('queryTxt SERVFAIL'), { code: 'SERVFAIL' }));
+    const strategy = new DnsVerificationStrategy(resolveTxt);
+
+    await expect(strategy.verify(job)).rejects.toThrow('SERVFAIL');
   });
 });
