@@ -83,3 +83,19 @@ describe('authentication', () => {
     expect(response.status).toBe(200);
   });
 });
+
+describe('websites', () => {
+  it('rejects an unauthenticated list with 401', async () => {
+    const response = await request(app.getHttpServer()).get('/api/v1/websites');
+
+    expect(response.status).toBe(401);
+  });
+
+  it('rejects an unauthenticated create with 401', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/websites')
+      .send({ name: 'Acme', url: 'https://acme.test' });
+
+    expect(response.status).toBe(401);
+  });
+});
