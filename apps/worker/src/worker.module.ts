@@ -5,6 +5,7 @@ import { LoggerModule } from 'nestjs-pino';
 
 import { WorkerConfigModule } from './config/worker-config.module';
 import { MailerModule } from './infrastructure/mailer/mailer.module';
+import { PrismaModule } from './infrastructure/prisma/prisma.module';
 import { RedisModule } from './infrastructure/redis/redis.module';
 import { EmailModule } from './queues/email/email.module';
 import { ExampleModule } from './queues/example/example.module';
@@ -40,6 +41,7 @@ export class WorkerModule {
           },
         }),
         RedisModule,
+        PrismaModule,
         MailerModule,
         EmailModule,
         ExampleModule,
