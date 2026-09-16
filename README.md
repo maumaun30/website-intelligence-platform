@@ -5,8 +5,11 @@
 AI-powered platform that continuously monitors websites and helps agencies, developers, and
 businesses identify, prioritize, and resolve technical issues.
 
-This repository currently contains the **foundation slice**: the monorepo, shared packages, and
-three running applications wired to Postgres and Redis. There are no product features yet.
+This repository contains the monorepo foundation — shared packages and three running applications
+wired to Postgres and Redis — plus two product slices: **authentication and organizations**
+(email/password sign-in, per-org membership and roles, invitation emails) and **website
+management** (register a site under your organization, prove domain ownership by DNS TXT record or
+HTML meta tag, and store how it should be scanned). Crawling and scanning are not built yet.
 
 ## Requirements
 
