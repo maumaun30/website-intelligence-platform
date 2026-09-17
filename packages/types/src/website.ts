@@ -49,6 +49,7 @@ export const websiteSchema = z.object({
   excludePaths: z.array(z.string()),
   scanFrequency: z.enum(SCAN_FREQUENCIES),
   respectRobotsTxt: z.boolean(),
+  nextScanAt: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
