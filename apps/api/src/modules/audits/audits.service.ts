@@ -23,7 +23,7 @@ export class AuditsService {
     private readonly auditQueue: ScanAuditQueueService,
   ) {}
 
-  private async auditOrThrow(scanId: string, organizationId: string) {
+  async findAuditOrThrow(scanId: string, organizationId: string) {
     await this.scans.getOrThrow(scanId, organizationId);
     const audit = await this.repo.findByScan(scanId, organizationId);
     if (!audit) {
@@ -33,19 +33,19 @@ export class AuditsService {
   }
 
   async getForScan(scanId: string, organizationId: string) {
-    const audit = await this.auditOrThrow(scanId, organizationId);
+    const audit = await this.findAuditOrThrow(scanId, organizationId);
     return { ...audit, ruleCounts: await this.repo.ruleCounts(audit.id) };
   }
 
   async listIssues(scanId: string, organizationId: string, query: IssueListQuery) {
-    const audit = await this.auditOrThrow(scanId, organizationId);
+    const audit = await this.findAuditOrThrow(scanId, organizationId);
     const { limit, offset, ...filters } = query;
     const result = await this.repo.listIssues(audit.id, filters, limit, offset);
     return { ...result, limit, offset };
   }
 
   async listChanges(scanId: string, organizationId: string, query: IssueChangeListQuery) {
-    const audit = await this.auditOrThrow(scanId, organizationId);
+    const audit = await this.findAuditOrThrow(scanId, organizationId);
     const result = await this.repo.listChanges(audit.id, query.kind, query.limit, query.offset);
     return { ...result, limit: query.limit, offset: query.offset };
   }

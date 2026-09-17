@@ -13,5 +13,6 @@ import { ScanAuditQueueService } from './scan-audit-queue.service';
   imports: [ScansModule, BullModule.registerQueue({ name: SCAN_AUDIT_QUEUE })],
   controllers: [AuditsController],
   providers: [AuditsService, AuditsRepository, ScanAuditQueueService],
+  exports: [AuditsService],
 })
 export class AuditsModule {}

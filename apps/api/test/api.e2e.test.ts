@@ -2,7 +2,12 @@ import { getQueueToken } from '@nestjs/bullmq';
 import type { INestApplication } from '@nestjs/common';
 import { apiEnvSchema, loadEnv } from '@wintel/config';
 import { createPrismaClient, type PrismaClient } from '@wintel/database';
-import { SCAN_AUDIT_QUEUE, WEBSITE_CRAWL_QUEUE, healthCheckResponseSchema } from '@wintel/types';
+import {
+  EXPLAIN_ISSUE_QUEUE,
+  SCAN_AUDIT_QUEUE,
+  WEBSITE_CRAWL_QUEUE,
+  healthCheckResponseSchema,
+} from '@wintel/types';
 import type { Queue } from 'bullmq';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -141,6 +146,7 @@ describe('scans', () => {
   afterAll(async () => {
     await app.get<Queue>(getQueueToken(WEBSITE_CRAWL_QUEUE)).obliterate({ force: true });
     await app.get<Queue>(getQueueToken(SCAN_AUDIT_QUEUE)).obliterate({ force: true });
+    await app.get<Queue>(getQueueToken(EXPLAIN_ISSUE_QUEUE)).obliterate({ force: true });
     await prisma.$disconnect();
   });
 
@@ -273,5 +279,19 @@ describe('scans', () => {
     expect(changes.status).toBe(404);
 
     expect((await request(app.getHttpServer()).get('/api/v1/overview')).status).toBe(401);
+  });
+
+  it('reports AI explanations as unavailable when disabled, and 401s anonymous requests', async () => {
+    const anonymous = await request(app.getHttpServer())
+      .post(`/api/v1/scans/${scanId}/audit/explanations`)
+      .send({ ruleId: 'missing-h1' });
+    expect(anonymous.status).toBe(401);
+
+    const disabled = await request(app.getHttpServer())
+      .post(`/api/v1/scans/${scanId}/audit/explanations`)
+      .set('Cookie', cookie)
+      .send({ ruleId: 'missing-h1' });
+    expect(disabled.status).toBe(503);
+    expect(disabled.body.details).toEqual({ code: 'AI_UNAVAILABLE' });
   });
 });
