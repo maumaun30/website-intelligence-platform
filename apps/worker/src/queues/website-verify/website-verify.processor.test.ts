@@ -6,8 +6,9 @@ import { WebsiteVerifyProcessor } from './website-verify.processor';
 
 function makePrisma() {
   const update = vi.fn().mockResolvedValue(undefined);
+  const updateMany = vi.fn().mockResolvedValue({ count: 0 });
 
-  return { prisma: { client: { website: { update } } }, update };
+  return { prisma: { client: { website: { update, updateMany } } }, update, updateMany };
 }
 
 const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
@@ -103,5 +104,42 @@ describe('WebsiteVerifyProcessor', () => {
     );
 
     await expect(processor.process({ data: { nonsense: true } } as never)).rejects.toBeDefined();
+  });
+
+  it('schedules the first scan of a daily or weekly website once verified', async () => {
+    const { prisma, updateMany } = makePrisma();
+    const dns = { verify: vi.fn().mockResolvedValue(true) };
+    const processor = new WebsiteVerifyProcessor(
+      prisma as never,
+      dns as never,
+      { verify: vi.fn() } as never,
+      logger as never,
+    );
+
+    await processor.process(job('dns'));
+
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { id: 'w1', nextScanAt: null, scanFrequency: 'daily' },
+      data: { nextScanAt: expect.any(Date) },
+    });
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { id: 'w1', nextScanAt: null, scanFrequency: 'weekly' },
+      data: { nextScanAt: expect.any(Date) },
+    });
+  });
+
+  it('does not schedule anything when verification fails', async () => {
+    const { prisma, updateMany } = makePrisma();
+    const dns = { verify: vi.fn().mockResolvedValue(false) };
+    const processor = new WebsiteVerifyProcessor(
+      prisma as never,
+      dns as never,
+      { verify: vi.fn() } as never,
+      logger as never,
+    );
+
+    await processor.process(job('dns'));
+
+    expect(updateMany).not.toHaveBeenCalled();
   });
 });

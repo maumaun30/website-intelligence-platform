@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 export const SCAN_STATUSES = ['queued', 'running', 'completed', 'failed'] as const;
+export const SCAN_TRIGGERS = ['manual', 'scheduled'] as const;
 export const SCAN_STOP_REASONS = ['finished', 'maxPages', 'maxDepth', 'deadline'] as const;
 /** A website may have at most one scan in these states at a time. */
 export const ACTIVE_SCAN_STATUSES = ['queued', 'running'] as const;
@@ -14,6 +15,7 @@ export const scanSchema = z.object({
   websiteId: z.string(),
   organizationId: z.string(),
   status: z.enum(SCAN_STATUSES),
+  trigger: z.enum(SCAN_TRIGGERS),
   stopReason: z.enum(SCAN_STOP_REASONS).nullable(),
   startedAt: z.string().nullable(),
   finishedAt: z.string().nullable(),
@@ -55,6 +57,7 @@ export const pageListSchema = z.object({
 });
 
 export type ScanStatus = (typeof SCAN_STATUSES)[number];
+export type ScanTrigger = (typeof SCAN_TRIGGERS)[number];
 export type ScanStopReason = (typeof SCAN_STOP_REASONS)[number];
 export type Scan = z.infer<typeof scanSchema>;
 export type Page = z.infer<typeof pageSchema>;

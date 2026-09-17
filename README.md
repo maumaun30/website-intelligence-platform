@@ -14,7 +14,8 @@ the worker walks it within those limits and robots.txt, storing every page, its 
 links, with live progress in the web app), and an **audit engine** (every completed scan is
 checked against 15 technical-SEO rules — broken links, errors, titles, descriptions, headings,
 canonicals, noindex, slow and large pages — with issues grouped by rule in the web app and
-re-runnable without re-crawling).
+re-runnable without re-crawling). Websites set to daily or weekly are scanned and audited on
+that schedule automatically.
 
 ## Requirements
 

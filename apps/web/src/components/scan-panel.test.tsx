@@ -29,6 +29,7 @@ function scan(overrides: Partial<Scan>): Scan {
     websiteId: 'w1',
     organizationId: 'o1',
     status: 'completed',
+    trigger: 'manual',
     stopReason: 'finished',
     startedAt: '2026-09-17T00:00:00.000Z',
     finishedAt: '2026-09-17T00:01:00.000Z',
@@ -98,5 +99,13 @@ describe('ScanPanel', () => {
     render(<ScanPanel website={website} />);
 
     expect(screen.getByText('Could not reach https://acme.test/')).toBeInTheDocument();
+  });
+
+  it('marks a scheduled scan', () => {
+    scans = [scan({ trigger: 'scheduled' })];
+
+    render(<ScanPanel website={website} />);
+
+    expect(screen.getByText('Scheduled')).toBeInTheDocument();
   });
 });

@@ -1,5 +1,10 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
-import { WEBSITE_VERIFY_QUEUE, type WebsiteVerifyJob, websiteVerifyJobSchema } from '@wintel/types';
+import {
+  WEBSITE_VERIFY_QUEUE,
+  type WebsiteVerifyJob,
+  computeNextScanAt,
+  websiteVerifyJobSchema,
+} from '@wintel/types';
 import type { Job } from 'bullmq';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 
@@ -39,6 +44,17 @@ export class WebsiteVerifyProcessor extends WorkerHost {
         verifiedAt: ok ? new Date() : null,
       },
     });
+
+    if (ok) {
+      // A newly verified website with a schedule gets its first run; an existing schedule is kept.
+      const now = new Date();
+      for (const frequency of ['daily', 'weekly'] as const) {
+        await this.prisma.client.website.updateMany({
+          where: { id: data.websiteId, nextScanAt: null, scanFrequency: frequency },
+          data: { nextScanAt: computeNextScanAt(frequency, now) },
+        });
+      }
+    }
 
     this.logger.info(
       { websiteId: data.websiteId, method: data.method, verified: ok },

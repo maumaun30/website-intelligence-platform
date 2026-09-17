@@ -65,12 +65,21 @@ export {
   PAGE_LIST_MAX_LIMIT,
   SCAN_STATUSES,
   SCAN_STOP_REASONS,
+  SCAN_TRIGGERS,
   pageListQuerySchema,
   pageListSchema,
   pageSchema,
   scanSchema,
 } from './scan';
-export type { Page, PageList, PageListQuery, Scan, ScanStatus, ScanStopReason } from './scan';
+export type {
+  Page,
+  PageList,
+  PageListQuery,
+  Scan,
+  ScanStatus,
+  ScanStopReason,
+  ScanTrigger,
+} from './scan';
 export { SCAN_DEADLINE_MS, WEBSITE_CRAWL_QUEUE, websiteCrawlJobSchema } from './scan-jobs';
 export type { WebsiteCrawlJob } from './scan-jobs';
 export {
@@ -102,3 +111,14 @@ export type {
 } from './audit';
 export { AUDIT_STALE_MS, SCAN_AUDIT_QUEUE, scanAuditJobSchema } from './audit-jobs';
 export type { ScanAuditJob } from './audit-jobs';
+export {
+  SCAN_INTERVAL_MS,
+  SCAN_SCHEDULER_QUEUE,
+  SCHEDULER_BATCH_SIZE,
+  SCHEDULER_JOB_ID,
+  SCHEDULER_TICK_MS,
+  computeNextScanAt,
+  evaluateScanStart,
+  isStaleScan,
+} from './schedule';
+export type { ActiveScanSnapshot, ScanStartDecision, ScanStartRefusal } from './schedule';

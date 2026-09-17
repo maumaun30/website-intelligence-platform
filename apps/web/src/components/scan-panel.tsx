@@ -55,6 +55,7 @@ export function ScanPanel({ website }: { website: Website }) {
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
               <Badge variant={STATUS_VARIANT[latest.status]}>{latest.status}</Badge>
+              {latest.trigger === 'scheduled' ? <Badge variant="outline">Scheduled</Badge> : null}
               <span className="text-sm">
                 {`${latest.pagesCrawled} pages crawled · ${latest.pagesFailed} failed`}
               </span>

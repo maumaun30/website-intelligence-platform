@@ -24,6 +24,7 @@ describe('scanSchema', () => {
       websiteId: 'w1',
       organizationId: 'o1',
       status: 'completed',
+      trigger: 'scheduled',
       stopReason: 'maxPages',
       startedAt: '2026-09-17T00:00:00.000Z',
       finishedAt: '2026-09-17T00:01:00.000Z',
