@@ -3,7 +3,7 @@ import { gunzipSync } from 'node:zlib';
 
 import { createPrismaClient, type PrismaClient } from '@wintel/database';
 import type { Job } from 'bullmq';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CrawlRunner, type CrawlSink } from './crawl-runner';
 import type { FetchResult } from './page-fetcher';
@@ -12,6 +12,7 @@ import { WebsiteCrawlProcessor } from './website-crawl.processor';
 
 let prisma: PrismaClient;
 const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+const auditQueue = { createQueuedAudit: vi.fn(), enqueue: vi.fn() };
 
 const SITE: Record<string, string> = {
   'https://crawl.test/': '<title>Home</title><a href="/a">A</a><a href="https://ext.test/">Ext</a>',
@@ -78,7 +79,12 @@ async function seedScan() {
 }
 
 function processor(factory: (sink: CrawlSink) => Pick<CrawlRunner, 'run'> = runnerFactory) {
-  return new WebsiteCrawlProcessor({ client: prisma } as never, factory, logger as never);
+  return new WebsiteCrawlProcessor(
+    { client: prisma } as never,
+    factory,
+    auditQueue as never,
+    logger as never,
+  );
 }
 
 beforeAll(() => {
@@ -87,6 +93,15 @@ beforeAll(() => {
 
 afterAll(async () => {
   await prisma.$disconnect();
+});
+
+beforeEach(() => {
+  auditQueue.createQueuedAudit.mockReset();
+  auditQueue.createQueuedAudit.mockImplementation((scanId: string) =>
+    Promise.resolve({ id: 'audit-1', scanId }),
+  );
+  auditQueue.enqueue.mockReset();
+  auditQueue.enqueue.mockResolvedValue(undefined);
 });
 
 describe('WebsiteCrawlProcessor', () => {
@@ -165,5 +180,39 @@ describe('WebsiteCrawlProcessor', () => {
     expect(
       await prisma.pageContent.count({ where: { page: { scanId: second.id } } }),
     ).toBeGreaterThan(0);
+  });
+
+  it('creates the audit before completing the scan, then enqueues it', async () => {
+    const { scanId, organizationId, job } = await seedScan();
+    auditQueue.createQueuedAudit.mockImplementation(async (id: string) => {
+      const scan = await prisma.scan.findUniqueOrThrow({ where: { id } });
+      expect(scan.status).toBe('running');
+      return { id: 'audit-1', scanId: id };
+    });
+
+    await processor().process(job);
+
+    expect(auditQueue.createQueuedAudit).toHaveBeenCalledWith(scanId, organizationId);
+    expect(auditQueue.enqueue).toHaveBeenCalledWith({ id: 'audit-1', scanId });
+  });
+
+  it('keeps the scan completed when enqueueing the audit fails', async () => {
+    const { scanId, job } = await seedScan();
+    auditQueue.enqueue.mockRejectedValue(new Error('redis down'));
+
+    await processor().process(job);
+
+    expect((await prisma.scan.findUniqueOrThrow({ where: { id: scanId } })).status).toBe(
+      'completed',
+    );
+  });
+
+  it('does not create an audit for a failed crawl', async () => {
+    const { job } = await seedScan();
+    const failing = () => ({ run: () => Promise.reject(new Error('root down')) });
+
+    await expect(processor(failing).process(job)).rejects.toThrow();
+
+    expect(auditQueue.createQueuedAudit).not.toHaveBeenCalled();
   });
 });

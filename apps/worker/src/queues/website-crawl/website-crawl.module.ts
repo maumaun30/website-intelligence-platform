@@ -2,6 +2,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { WEBSITE_CRAWL_QUEUE } from '@wintel/types';
 
+import { ScanAuditModule } from '../scan-audit/scan-audit.module';
 import { CrawlRunner } from './crawl-runner';
 import { PageFetcher } from './page-fetcher';
 import { loadRobotsTxt } from './robots-txt';
@@ -20,7 +21,7 @@ const createRunner: CrawlRunnerFactory = (sink) =>
 
 /** A factory rather than a singleton runner: each scan gets its own sink and crawl state. */
 @Module({
-  imports: [BullModule.registerQueue({ name: WEBSITE_CRAWL_QUEUE })],
+  imports: [ScanAuditModule, BullModule.registerQueue({ name: WEBSITE_CRAWL_QUEUE })],
   providers: [WebsiteCrawlProcessor, { provide: CRAWL_RUNNER_FACTORY, useValue: createRunner }],
 })
 export class WebsiteCrawlModule {}

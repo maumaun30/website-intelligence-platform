@@ -5,6 +5,7 @@ import type { Job } from 'bullmq';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
+import { ScanAuditQueueService } from '../scan-audit/scan-audit-queue.service';
 import type { CrawlResult, CrawlSink } from './crawl-runner';
 import { CrawlWriter } from './crawl-writer';
 
@@ -17,13 +18,15 @@ export type CrawlRunnerFactory = (sink: CrawlSink) => {
  * Owns a scan's lifecycle around the crawl. The `queued` → `running` claim is a conditional update,
  * so a job BullMQ re-delivers after a stall is ignored instead of crawling the site twice into the
  * same scan. Any throw marks the scan `failed` and is rethrown so BullMQ records it; the job was
- * enqueued with a single attempt, so it is never retried.
+ * enqueued with a single attempt, so it is never retried. On success it creates the scan's audit
+ * before marking the scan completed — so a completed scan always has one — then enqueues it.
  */
 @Processor(WEBSITE_CRAWL_QUEUE)
 export class WebsiteCrawlProcessor extends WorkerHost {
   constructor(
     private readonly prisma: PrismaService,
     @Inject(CRAWL_RUNNER_FACTORY) private readonly createRunner: CrawlRunnerFactory,
+    private readonly auditQueue: ScanAuditQueueService,
     @InjectPinoLogger(WebsiteCrawlProcessor.name) private readonly logger: PinoLogger,
   ) {
     super();
@@ -46,6 +49,7 @@ export class WebsiteCrawlProcessor extends WorkerHost {
     try {
       const result = await this.createRunner(writer).run(data);
       await writer.flush();
+      const audit = await this.auditQueue.createQueuedAudit(data.scanId, data.organizationId);
       await scans.update({
         where: { id: data.scanId },
         data: {
@@ -58,6 +62,15 @@ export class WebsiteCrawlProcessor extends WorkerHost {
       });
       await writer.pruneOlderContent(data.websiteId);
       this.logger.info({ scanId: data.scanId, ...result }, 'Crawl completed');
+
+      try {
+        await this.auditQueue.enqueue(audit);
+      } catch (enqueueError) {
+        this.logger.error(
+          { scanId: data.scanId, auditId: audit.id, err: enqueueError },
+          'Could not enqueue the audit of a completed scan',
+        );
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       try {
