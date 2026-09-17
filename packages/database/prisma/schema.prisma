@@ -276,44 +276,72 @@ enum IssueSeverity {
 }
 
 model Audit {
-  id             String      @id @default(uuid())
-  scanId         String      @unique
-  organizationId String
-  status         AuditStatus @default(queued)
-  criticalCount  Int         @default(0)
-  warningCount   Int         @default(0)
-  noticeCount    Int         @default(0)
-  startedAt      DateTime?
-  finishedAt     DateTime?
-  error          String?
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
+  id              String      @id @default(uuid())
+  scanId          String      @unique
+  organizationId  String
+  status          AuditStatus @default(queued)
+  criticalCount   Int         @default(0)
+  warningCount    Int         @default(0)
+  noticeCount     Int         @default(0)
+  score           Int?
+  scoreDelta      Int?
+  newIssueCount   Int?
+  fixedIssueCount Int?
+  previousAuditId String?
+  startedAt       DateTime?
+  finishedAt      DateTime?
+  error           String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
 
-  scan   Scan    @relation(fields: [scanId], references: [id], onDelete: Cascade)
-  issues Issue[]
+  scan    Scan          @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  issues  Issue[]
+  changes IssueChange[]
 
   @@index([organizationId])
   @@map("audit")
 }
 
 model Issue {
-  id       String        @id @default(uuid())
-  auditId  String
-  pageId   String
-  ruleId   String
-  severity IssueSeverity
-  message  String
-  evidence Json          @default("{}")
+  id          String        @id @default(uuid())
+  auditId     String
+  pageId      String
+  ruleId      String
+  severity    IssueSeverity
+  message     String
+  fingerprint String        @default("")
+  evidence    Json          @default("{}")
 
   audit Audit @relation(fields: [auditId], references: [id], onDelete: Cascade)
   page  Page  @relation(fields: [pageId], references: [id], onDelete: Cascade)
 
   @@index([auditId, severity])
   @@index([auditId, ruleId])
+  @@index([auditId, fingerprint])
   @@map("issue")
 }
 
 enum ScanTrigger {
   manual
   scheduled
+}
+
+enum IssueChangeKind {
+  new
+  fixed
+}
+
+model IssueChange {
+  id       String          @id @default(uuid())
+  auditId  String
+  kind     IssueChangeKind
+  ruleId   String
+  severity IssueSeverity
+  path     String
+  message  String
+
+  audit Audit @relation(fields: [auditId], references: [id], onDelete: Cascade)
+
+  @@index([auditId, kind])
+  @@map("issue_change")
 }
