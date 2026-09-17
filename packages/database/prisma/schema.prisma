@@ -169,8 +169,90 @@ model Website {
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   createdBy    User         @relation(fields: [createdById], references: [id])
+  scans        Scan[]
 
   @@unique([organizationId, domain])
   @@index([organizationId])
   @@map("website")
+}
+
+enum ScanStatus {
+  queued
+  running
+  completed
+  failed
+}
+
+enum ScanStopReason {
+  finished
+  maxPages
+  maxDepth
+  deadline
+}
+
+model Scan {
+  id             String          @id @default(uuid())
+  websiteId      String
+  organizationId String
+  status         ScanStatus      @default(queued)
+  stopReason     ScanStopReason?
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  pagesCrawled   Int             @default(0)
+  pagesFailed    Int             @default(0)
+  error          String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  website Website @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  pages   Page[]
+
+  @@index([websiteId, createdAt])
+  @@index([organizationId])
+  @@map("scan")
+}
+
+model Page {
+  id             String   @id @default(uuid())
+  scanId         String
+  url            String
+  path           String
+  depth          Int
+  statusCode     Int?
+  contentType    String?
+  byteSize       Int?
+  responseTimeMs Int?
+  title          String?
+  redirectedTo   String?
+  error          String?
+  fetchedAt      DateTime @default(now())
+
+  scan    Scan         @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  content PageContent?
+  links   PageLink[]
+
+  @@unique([scanId, url])
+  @@index([scanId, statusCode])
+  @@map("page")
+}
+
+model PageContent {
+  pageId String @id
+  html   Bytes
+
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@map("page_content")
+}
+
+model PageLink {
+  id       String  @id @default(uuid())
+  pageId   String
+  url      String
+  internal Boolean
+
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([pageId])
+  @@map("page_link")
 }
