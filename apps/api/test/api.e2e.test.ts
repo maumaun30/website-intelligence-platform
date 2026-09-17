@@ -251,4 +251,27 @@ describe('scans', () => {
       .send({ scanFrequency: 'manual' });
     expect(manual.body.nextScanAt).toBeNull();
   });
+
+  it('serves the overview and a website trend to members', async () => {
+    const overview = await request(app.getHttpServer())
+      .get('/api/v1/overview')
+      .set('Cookie', cookie);
+    expect(overview.status).toBe(200);
+    expect(overview.body.map((row: { websiteId: string }) => row.websiteId)).toContain(websiteId);
+
+    const trend = await request(app.getHttpServer())
+      .get(`/api/v1/websites/${websiteId}/trend`)
+      .set('Cookie', cookie);
+    expect(trend.status).toBe(200);
+    expect(trend.body).toEqual([]);
+  });
+
+  it('404s changes of a scan without an audit and 401s the overview anonymously', async () => {
+    const changes = await request(app.getHttpServer())
+      .get(`/api/v1/scans/${scanId}/changes`)
+      .set('Cookie', cookie);
+    expect(changes.status).toBe(404);
+
+    expect((await request(app.getHttpServer()).get('/api/v1/overview')).status).toBe(401);
+  });
 });

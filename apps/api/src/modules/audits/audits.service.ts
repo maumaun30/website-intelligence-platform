@@ -1,5 +1,10 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { ACTIVE_AUDIT_STATUSES, AUDIT_STALE_MS, type IssueListQuery } from '@wintel/types';
+import {
+  ACTIVE_AUDIT_STATUSES,
+  AUDIT_STALE_MS,
+  type IssueChangeListQuery,
+  type IssueListQuery,
+} from '@wintel/types';
 
 import { ScansService } from '../scans/scans.service';
 import { AuditsRepository } from './audits.repository';
@@ -37,6 +42,12 @@ export class AuditsService {
     const { limit, offset, ...filters } = query;
     const result = await this.repo.listIssues(audit.id, filters, limit, offset);
     return { ...result, limit, offset };
+  }
+
+  async listChanges(scanId: string, organizationId: string, query: IssueChangeListQuery) {
+    const audit = await this.auditOrThrow(scanId, organizationId);
+    const result = await this.repo.listChanges(audit.id, query.kind, query.limit, query.offset);
+    return { ...result, limit: query.limit, offset: query.offset };
   }
 
   async rerun(scanId: string, organizationId: string, now: Date = new Date()) {

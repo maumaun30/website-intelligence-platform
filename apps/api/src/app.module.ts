@@ -11,6 +11,7 @@ import { RedisModule } from './infrastructure/redis/redis.module';
 import { AuditsModule } from './modules/audits/audits.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
+import { InsightsModule } from './modules/insights/insights.module';
 import { ScansModule } from './modules/scans/scans.module';
 import { WebsitesModule } from './modules/websites/websites.module';
 
@@ -53,6 +54,7 @@ export class AppModule {
         WebsitesModule,
         ScansModule,
         AuditsModule,
+        InsightsModule,
         HealthModule,
       ],
       providers: [AllExceptionsFilter],

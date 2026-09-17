@@ -15,7 +15,9 @@ links, with live progress in the web app), and an **audit engine** (every comple
 checked against 15 technical-SEO rules — broken links, errors, titles, descriptions, headings,
 canonicals, noindex, slow and large pages — with issues grouped by rule in the web app and
 re-runnable without re-crawling). Websites set to daily or weekly are scanned and audited on
-that schedule automatically.
+that schedule automatically. Each audit gets a 0–100 health score and a list of issues new or
+fixed since the previous audit; the dashboard ranks all websites by health and each website shows
+its score trend.
 
 ## Requirements
 

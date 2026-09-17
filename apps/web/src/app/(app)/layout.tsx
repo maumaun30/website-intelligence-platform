@@ -10,9 +10,17 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="flex items-center justify-between border-b border-border px-6 py-4">
-        <Link href="/dashboard" className="text-sm font-semibold tracking-tight">
-          Website Intelligence
-        </Link>
+        <nav className="flex items-center gap-6">
+          <Link href="/dashboard" className="text-sm font-semibold tracking-tight">
+            Website Intelligence
+          </Link>
+          <Link
+            href="/dashboard/websites"
+            className="text-sm text-muted-foreground hover:text-foreground"
+          >
+            Websites
+          </Link>
+        </nav>
         <div className="flex items-center gap-4">
           <span className="text-sm text-muted-foreground">{user.email}</span>
           <SignOutButton />

@@ -3,6 +3,7 @@
 import { AUDIT_RULES, type AuditStatus, ISSUE_SEVERITIES } from '@wintel/types';
 import { Badge, Button } from '@wintel/ui';
 
+import { AuditChanges } from '@/components/audit-changes';
 import { AuditRuleGroup } from '@/components/audit-rule-group';
 import { isActiveAudit, useAudit, useRerunAudit } from '@/lib/use-audits';
 
@@ -73,6 +74,7 @@ export function AuditSection({ scanId }: { scanId: string }) {
           <p className="text-sm">
             {`${audit.criticalCount} critical · ${plural(audit.warningCount, 'warning')} · ${plural(audit.noticeCount, 'notice')}`}
           </p>
+          <AuditChanges scanId={scanId} audit={audit} />
           {totalIssues === 0 ? (
             <p className="text-sm text-muted-foreground">No issues found.</p>
           ) : (
