@@ -6,12 +6,15 @@ AI-powered platform that continuously monitors websites and helps agencies, deve
 businesses identify, prioritize, and resolve technical issues.
 
 This repository contains the monorepo foundation — shared packages and three running applications
-wired to Postgres and Redis — plus three product slices: **authentication and organizations**
+wired to Postgres and Redis — plus four product slices: **authentication and organizations**
 (email/password sign-in, per-org membership and roles, invitation emails), **website management**
 (register a site under your organization, prove domain ownership by DNS TXT record or HTML meta
 tag, and configure how it should be scanned), and **crawling** (start a scan of a verified site;
 the worker walks it within those limits and robots.txt, storing every page, its HTML, and its
-links, with live progress in the web app). Analysis of crawled pages is not built yet.
+links, with live progress in the web app), and an **audit engine** (every completed scan is
+checked against 15 technical-SEO rules — broken links, errors, titles, descriptions, headings,
+canonicals, noindex, slow and large pages — with issues grouped by rule in the web app and
+re-runnable without re-crawling).
 
 ## Requirements
 
