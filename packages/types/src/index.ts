@@ -73,3 +73,32 @@ export {
 export type { Page, PageList, PageListQuery, Scan, ScanStatus, ScanStopReason } from './scan';
 export { SCAN_DEADLINE_MS, WEBSITE_CRAWL_QUEUE, websiteCrawlJobSchema } from './scan-jobs';
 export type { WebsiteCrawlJob } from './scan-jobs';
+export {
+  ACTIVE_AUDIT_STATUSES,
+  AUDIT_RULES,
+  AUDIT_RULE_IDS,
+  AUDIT_STATUSES,
+  ISSUE_LIST_DEFAULT_LIMIT,
+  ISSUE_LIST_MAX_LIMIT,
+  ISSUE_SEVERITIES,
+  auditRuleSchema,
+  auditSchema,
+  issueListQuerySchema,
+  issueListSchema,
+  issueSchema,
+  ruleCountSchema,
+} from './audit';
+export type {
+  Audit,
+  AuditRule,
+  AuditRuleDefinition,
+  AuditRuleId,
+  AuditStatus,
+  Issue,
+  IssueList,
+  IssueListQuery,
+  IssueSeverity,
+  RuleCount,
+} from './audit';
+export { AUDIT_STALE_MS, SCAN_AUDIT_QUEUE, scanAuditJobSchema } from './audit-jobs';
+export type { ScanAuditJob } from './audit-jobs';
