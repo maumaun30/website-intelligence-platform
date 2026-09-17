@@ -236,4 +236,19 @@ describe('scans', () => {
     expect(response.status).toBe(409);
     expect(response.body.details).toEqual({ code: 'SCAN_NOT_COMPLETED' });
   });
+
+  it('schedules and unschedules scans when the frequency changes', async () => {
+    const daily = await request(app.getHttpServer())
+      .patch(`/api/v1/websites/${websiteId}`)
+      .set('Cookie', cookie)
+      .send({ scanFrequency: 'daily' });
+    expect(daily.status).toBe(200);
+    expect(typeof daily.body.nextScanAt).toBe('string');
+
+    const manual = await request(app.getHttpServer())
+      .patch(`/api/v1/websites/${websiteId}`)
+      .set('Cookie', cookie)
+      .send({ scanFrequency: 'manual' });
+    expect(manual.body.nextScanAt).toBeNull();
+  });
 });

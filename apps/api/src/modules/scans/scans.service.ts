@@ -1,28 +1,14 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { type PageListQuery, SCAN_DEADLINE_MS } from '@wintel/types';
+import { type PageListQuery, type ScanStartRefusal, evaluateScanStart } from '@wintel/types';
 
 import { WebsitesService } from '../websites/websites.service';
 import { ScansRepository } from './scans.repository';
 import { WebsiteCrawlQueueService } from './website-crawl-queue.service';
 
-interface ActiveScan {
-  id: string;
-  status: string;
-  startedAt: Date | null;
-}
-
-/**
- * A `running` scan whose worker died never reaches a terminal state on its own. Once it has run
- * longer than the worker's own deadline it cannot still be alive, so it must not block new scans.
- * A `queued` scan is never stale: it may simply be waiting behind other websites' crawls.
- */
-function isStale(scan: ActiveScan, now: Date): boolean {
-  return (
-    scan.status === 'running' &&
-    scan.startedAt !== null &&
-    now.getTime() - scan.startedAt.getTime() > SCAN_DEADLINE_MS
-  );
-}
+const REFUSAL_MESSAGES: Record<ScanStartRefusal, string> = {
+  WEBSITE_NOT_VERIFIED: 'Verify ownership of this website before scanning it',
+  SCAN_IN_PROGRESS: 'A scan of this website is already in progress',
+};
 
 /** Scan business rules: ownership via the website, verification, one active scan, enqueue. */
 @Injectable()
@@ -36,23 +22,21 @@ export class ScansService {
   async start(websiteId: string, organizationId: string, now: Date = new Date()) {
     const website = await this.websites.getOrThrow(websiteId, organizationId);
 
-    if (website.verificationStatus !== 'verified') {
+    const decision = evaluateScanStart({
+      verificationStatus: website.verificationStatus,
+      activeScan: await this.repo.findActiveForWebsite(websiteId, organizationId),
+      now,
+    });
+
+    if (decision.action === 'refuse') {
       throw new ConflictException({
-        message: 'Verify ownership of this website before scanning it',
-        details: { code: 'WEBSITE_NOT_VERIFIED' },
+        message: REFUSAL_MESSAGES[decision.code],
+        details: { code: decision.code },
       });
     }
-
-    const active = await this.repo.findActiveForWebsite(websiteId, organizationId);
-    if (active) {
-      if (!isStale(active, now)) {
-        throw new ConflictException({
-          message: 'A scan of this website is already in progress',
-          details: { code: 'SCAN_IN_PROGRESS' },
-        });
-      }
+    if (decision.staleScanId !== null) {
       await this.repo.markFailed(
-        active.id,
+        decision.staleScanId,
         organizationId,
         'Scan did not finish before the deadline',
       );

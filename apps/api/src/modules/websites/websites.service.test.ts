@@ -100,4 +100,61 @@ describe('WebsitesService', () => {
     );
     expect(queue.enqueue).not.toHaveBeenCalled();
   });
+
+  describe('scheduling on update', () => {
+    const now = new Date('2026-09-17T12:00:00.000Z');
+
+    it('schedules the next scan when the frequency changes to daily', async () => {
+      repo.findInOrg.mockResolvedValue({ ...sampleRow, scanFrequency: 'manual' });
+      repo.update.mockResolvedValue(sampleRow);
+
+      await service.update('w1', 'org1', { scanFrequency: 'daily' }, now);
+
+      expect(repo.update).toHaveBeenCalledWith('w1', 'org1', {
+        scanFrequency: 'daily',
+        nextScanAt: new Date('2026-09-18T12:00:00.000Z'),
+      });
+    });
+
+    it('turns scheduling off when the frequency becomes manual', async () => {
+      repo.findInOrg.mockResolvedValue({ ...sampleRow, scanFrequency: 'weekly' });
+      repo.update.mockResolvedValue(sampleRow);
+
+      await service.update('w1', 'org1', { scanFrequency: 'manual' }, now);
+
+      expect(repo.update).toHaveBeenCalledWith('w1', 'org1', {
+        scanFrequency: 'manual',
+        nextScanAt: null,
+      });
+    });
+
+    it('leaves the schedule alone when the frequency is unchanged', async () => {
+      repo.findInOrg.mockResolvedValue({ ...sampleRow, scanFrequency: 'daily' });
+      repo.update.mockResolvedValue(sampleRow);
+
+      await service.update('w1', 'org1', { scanFrequency: 'daily', maxDepth: 4 }, now);
+
+      expect(repo.update).toHaveBeenCalledWith('w1', 'org1', {
+        scanFrequency: 'daily',
+        maxDepth: 4,
+      });
+    });
+
+    it('does not read the website when the frequency is not part of the update', async () => {
+      repo.update.mockResolvedValue(sampleRow);
+
+      await service.update('w1', 'org1', { name: 'Renamed' }, now);
+
+      expect(repo.findInOrg).not.toHaveBeenCalled();
+    });
+
+    it('404s a frequency change for a website outside the org', async () => {
+      repo.findInOrg.mockResolvedValue(null);
+
+      await expect(
+        service.update('w1', 'org1', { scanFrequency: 'daily' }, now),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(repo.update).not.toHaveBeenCalled();
+    });
+  });
 });

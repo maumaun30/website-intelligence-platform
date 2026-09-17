@@ -2,7 +2,12 @@ import { randomUUID } from 'node:crypto';
 
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@wintel/database';
-import type { CreateWebsiteInput, UpdateWebsiteInput, VerificationMethod } from '@wintel/types';
+import {
+  type CreateWebsiteInput,
+  type UpdateWebsiteInput,
+  type VerificationMethod,
+  computeNextScanAt,
+} from '@wintel/types';
 
 import { normalizeWebsiteUrl } from './normalize-url';
 import { WebsiteVerifyQueueService } from './website-verify-queue.service';
@@ -52,8 +57,26 @@ export class WebsitesService {
     }
   }
 
-  async update(id: string, organizationId: string, input: UpdateWebsiteInput) {
-    const updated = await this.repo.update(id, organizationId, input);
+  async update(
+    id: string,
+    organizationId: string,
+    input: UpdateWebsiteInput,
+    now: Date = new Date(),
+  ) {
+    const data: Prisma.WebsiteUpdateInput = { ...input };
+
+    // Only a real frequency change moves the schedule; re-saving the same config must not postpone it.
+    if (input.scanFrequency !== undefined) {
+      const current = await this.repo.findInOrg(id, organizationId);
+      if (!current) {
+        throw new NotFoundException('Website not found');
+      }
+      if (current.scanFrequency !== input.scanFrequency) {
+        data.nextScanAt = computeNextScanAt(input.scanFrequency, now);
+      }
+    }
+
+    const updated = await this.repo.update(id, organizationId, data);
     if (!updated) {
       throw new NotFoundException('Website not found');
     }
