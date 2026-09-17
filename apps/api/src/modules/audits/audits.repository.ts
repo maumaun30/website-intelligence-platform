@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { AuditRuleId, IssueSeverity, RuleCount } from '@wintel/types';
+import type { AuditRuleId, IssueChangeKind, IssueSeverity, RuleCount } from '@wintel/types';
 
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 
@@ -71,5 +71,24 @@ export class AuditsRepository {
         error: null,
       },
     });
+  }
+
+  async listChanges(
+    auditId: string,
+    kind: IssueChangeKind | undefined,
+    limit: number,
+    offset: number,
+  ) {
+    const where = { auditId, ...(kind === undefined ? {} : { kind }) };
+    const [items, total] = await this.prisma.client.$transaction([
+      this.prisma.client.issueChange.findMany({
+        where,
+        orderBy: [{ severity: 'asc' }, { ruleId: 'asc' }, { path: 'asc' }],
+        take: limit,
+        skip: offset,
+      }),
+      this.prisma.client.issueChange.count({ where }),
+    ]);
+    return { items, total };
   }
 }

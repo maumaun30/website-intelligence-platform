@@ -140,4 +140,42 @@ describe('AuditsRepository', () => {
       error: null,
     });
   });
+
+  it('lists changes filtered by kind', async () => {
+    const { audit } = await seed();
+    await prisma.issueChange.createMany({
+      data: [
+        {
+          auditId: audit.id,
+          kind: 'new',
+          ruleId: 'noindex',
+          severity: 'notice',
+          path: '/b',
+          message: 'm',
+        },
+        {
+          auditId: audit.id,
+          kind: 'fixed',
+          ruleId: 'missing-h1',
+          severity: 'warning',
+          path: '/a',
+          message: 'm',
+        },
+        {
+          auditId: audit.id,
+          kind: 'new',
+          ruleId: 'server-error',
+          severity: 'critical',
+          path: '/c',
+          message: 'm',
+        },
+      ],
+    });
+
+    const newOnes = await repo.listChanges(audit.id, 'new', 10, 0);
+    expect(newOnes.total).toBe(2);
+    expect(newOnes.items.map((change) => change.ruleId)).toEqual(['server-error', 'noindex']);
+
+    expect((await repo.listChanges(audit.id, undefined, 10, 0)).total).toBe(3);
+  });
 });

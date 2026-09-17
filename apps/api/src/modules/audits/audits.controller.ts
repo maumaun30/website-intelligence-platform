@@ -12,8 +12,10 @@ import {
   AUDIT_RULES,
   type AuditRule,
   type AuditRuleId,
+  type IssueChangeListQuery,
   type IssueListQuery,
   type Principal,
+  issueChangeListQuerySchema,
   issueListQuerySchema,
 } from '@wintel/types';
 
@@ -61,5 +63,14 @@ export class AuditsController {
     @Query(new ZodValidationPipe(issueListQuerySchema)) query: IssueListQuery,
   ) {
     return this.audits.listIssues(id, this.orgId(principal), query);
+  }
+
+  @Get('scans/:id/changes')
+  changes(
+    @CurrentUser() principal: Principal,
+    @Param('id') id: string,
+    @Query(new ZodValidationPipe(issueChangeListQuerySchema)) query: IssueChangeListQuery,
+  ) {
+    return this.audits.listChanges(id, this.orgId(principal), query);
   }
 }

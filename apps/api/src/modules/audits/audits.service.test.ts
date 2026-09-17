@@ -20,6 +20,7 @@ describe('AuditsService', () => {
       listIssues: vi.fn(),
       latestCompletedScanId: vi.fn().mockResolvedValue('s1'),
       requeue: vi.fn().mockResolvedValue({ id: 'a1', scanId: 's1', status: 'queued' }),
+      listChanges: vi.fn(),
     };
     scans = { getOrThrow: vi.fn().mockResolvedValue(scan) };
     queue = { enqueue: vi.fn().mockResolvedValue(undefined) };
@@ -95,5 +96,15 @@ describe('AuditsService', () => {
       updatedAt: new Date(now.getTime() - AUDIT_STALE_MS - 1),
     });
     await expect(service.rerun('s1', 'o1', now)).resolves.toMatchObject({ id: 'a1' });
+  });
+
+  it('lists changes with pagination echoed', async () => {
+    repo.findByScan!.mockResolvedValue({ id: 'a1' });
+    repo.listChanges!.mockResolvedValue({ items: [], total: 0 });
+
+    const result = await service.listChanges('s1', 'o1', { kind: 'fixed', limit: 10, offset: 0 });
+
+    expect(repo.listChanges).toHaveBeenCalledWith('a1', 'fixed', 10, 0);
+    expect(result).toEqual({ items: [], total: 0, limit: 10, offset: 0 });
   });
 });
