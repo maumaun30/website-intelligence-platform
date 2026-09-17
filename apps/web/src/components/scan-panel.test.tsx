@@ -17,6 +17,8 @@ vi.mock('@/lib/use-scans', () => ({
   }),
 }));
 
+vi.mock('@/components/audit-section', () => ({ AuditSection: () => null }));
+
 import { ScanPanel } from './scan-panel';
 
 const website = { id: 'w1', name: 'Acme', verificationStatus: 'verified' } as Website;
