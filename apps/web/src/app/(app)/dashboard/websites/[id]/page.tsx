@@ -4,6 +4,7 @@ import { Card } from '@wintel/ui';
 import { use } from 'react';
 
 import { ScanConfigForm } from '@/components/scan-config-form';
+import { ScanPanel } from '@/components/scan-panel';
 import { VerificationPanel } from '@/components/verification-panel';
 import { useWebsite } from '@/lib/use-websites';
 
@@ -27,6 +28,8 @@ export default function WebsiteDetailPage({ params }: { params: Promise<{ id: st
       </header>
 
       <VerificationPanel website={data} />
+
+      <ScanPanel website={data} />
 
       <section className="flex flex-col gap-4">
         <h2 className="text-sm font-medium">Scan configuration</h2>
