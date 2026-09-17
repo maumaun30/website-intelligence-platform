@@ -122,3 +122,30 @@ export {
   isStaleScan,
 } from './schedule';
 export type { ActiveScanSnapshot, ScanStartDecision, ScanStartRefusal } from './schedule';
+export {
+  HEALTH_SCORE_WEIGHTS,
+  ISSUE_CHANGE_KINDS,
+  TREND_DEFAULT_LIMIT,
+  TREND_MAX_LIMIT,
+  computeHealthScore,
+  diffIssues,
+  issueChangeListQuerySchema,
+  issueChangeListSchema,
+  issueChangeSchema,
+  issueFingerprint,
+  overviewRowSchema,
+  scoreBand,
+  trendPointSchema,
+  trendQuerySchema,
+} from './insights';
+export type {
+  FingerprintedIssue,
+  IssueChange,
+  IssueChangeKind,
+  IssueChangeList,
+  IssueChangeListQuery,
+  OverviewRow,
+  ScoreBand,
+  TrendPoint,
+  TrendQuery,
+} from './insights';
