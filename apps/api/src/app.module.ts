@@ -10,6 +10,7 @@ import { PrismaModule } from './infrastructure/prisma/prisma.module';
 import { RedisModule } from './infrastructure/redis/redis.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
+import { ScansModule } from './modules/scans/scans.module';
 import { WebsitesModule } from './modules/websites/websites.module';
 
 @Module({})
@@ -49,6 +50,7 @@ export class AppModule {
         RedisModule,
         AuthModule,
         WebsitesModule,
+        ScansModule,
         HealthModule,
       ],
       providers: [AllExceptionsFilter],
