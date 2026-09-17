@@ -1,6 +1,9 @@
+import { getQueueToken } from '@nestjs/bullmq';
 import type { INestApplication } from '@nestjs/common';
 import { apiEnvSchema, loadEnv } from '@wintel/config';
-import { healthCheckResponseSchema } from '@wintel/types';
+import { createPrismaClient, type PrismaClient } from '@wintel/database';
+import { WEBSITE_CRAWL_QUEUE, healthCheckResponseSchema } from '@wintel/types';
+import type { Queue } from 'bullmq';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -97,5 +100,105 @@ describe('websites', () => {
       .send({ name: 'Acme', url: 'https://acme.test' });
 
     expect(response.status).toBe(401);
+  });
+});
+
+describe('scans', () => {
+  let prisma: PrismaClient;
+  let cookie: string;
+  let websiteId: string;
+
+  beforeAll(async () => {
+    prisma = createPrismaClient({ databaseUrl: process.env.DATABASE_URL ?? '' });
+    const email = `scan-e2e-${Date.now()}@example.test`;
+    const password = 'scan-e2e-password-1234';
+    const origin = process.env.BETTER_AUTH_URL ?? 'http://localhost:4000';
+
+    await request(app.getHttpServer())
+      .post('/api/v1/auth/sign-up/email')
+      .set('Origin', origin)
+      .send({ email, password, name: 'Scan E2E' })
+      .expect(200);
+    await prisma.user.update({ where: { email }, data: { emailVerified: true } });
+
+    const signIn = await request(app.getHttpServer())
+      .post('/api/v1/auth/sign-in/email')
+      .set('Origin', origin)
+      .send({ email, password })
+      .expect(200);
+    cookie = ([] as string[]).concat(signIn.headers['set-cookie'] ?? []).join('; ');
+
+    const created = await request(app.getHttpServer())
+      .post('/api/v1/websites')
+      .set('Cookie', cookie)
+      .set('Origin', origin)
+      .send({ name: 'Scan target', url: `https://scan-e2e-${Date.now()}.test` })
+      .expect(201);
+    websiteId = created.body.id;
+  });
+
+  afterAll(async () => {
+    await app.get<Queue>(getQueueToken(WEBSITE_CRAWL_QUEUE)).obliterate({ force: true });
+    await prisma.$disconnect();
+  });
+
+  it('rejects an unauthenticated scan start with 401', async () => {
+    const response = await request(app.getHttpServer()).post('/api/v1/websites/any/scans');
+
+    expect(response.status).toBe(401);
+  });
+
+  it('rejects an unauthenticated scan read with 401', async () => {
+    const response = await request(app.getHttpServer()).get('/api/v1/scans/any');
+
+    expect(response.status).toBe(401);
+  });
+
+  it('refuses to scan an unverified website with 409', async () => {
+    const response = await request(app.getHttpServer())
+      .post(`/api/v1/websites/${websiteId}/scans`)
+      .set('Cookie', cookie);
+
+    expect(response.status).toBe(409);
+    expect(response.body.details).toEqual({ code: 'WEBSITE_NOT_VERIFIED' });
+  });
+
+  it('starts a scan on a verified website, then refuses a concurrent one', async () => {
+    await prisma.website.update({
+      where: { id: websiteId },
+      data: { verificationStatus: 'verified' },
+    });
+
+    const first = await request(app.getHttpServer())
+      .post(`/api/v1/websites/${websiteId}/scans`)
+      .set('Cookie', cookie);
+    expect(first.status).toBe(202);
+    expect(first.body.status).toBe('queued');
+
+    const second = await request(app.getHttpServer())
+      .post(`/api/v1/websites/${websiteId}/scans`)
+      .set('Cookie', cookie);
+    expect(second.status).toBe(409);
+    expect(second.body.details).toEqual({ code: 'SCAN_IN_PROGRESS' });
+
+    const listed = await request(app.getHttpServer())
+      .get(`/api/v1/websites/${websiteId}/scans`)
+      .set('Cookie', cookie);
+    expect(listed.status).toBe(200);
+    expect(listed.body[0].id).toBe(first.body.id);
+
+    const pages = await request(app.getHttpServer())
+      .get(`/api/v1/scans/${first.body.id}/pages?limit=10`)
+      .set('Cookie', cookie);
+    expect(pages.status).toBe(200);
+    expect(pages.body).toEqual({ items: [], total: 0, limit: 10, offset: 0 });
+  });
+
+  it('rejects an out-of-range page limit with 400', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/api/v1/scans/any/pages?limit=500')
+      .set('Cookie', cookie);
+
+    expect(response.status).toBe(400);
   });
 });

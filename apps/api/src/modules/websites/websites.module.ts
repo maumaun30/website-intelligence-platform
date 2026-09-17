@@ -12,5 +12,6 @@ import { WebsitesService } from './websites.service';
   imports: [BullModule.registerQueue({ name: WEBSITE_VERIFY_QUEUE })],
   controllers: [WebsitesController],
   providers: [WebsitesService, WebsitesRepository, WebsiteVerifyQueueService],
+  exports: [WebsitesService],
 })
 export class WebsitesModule {}
