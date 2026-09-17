@@ -2,7 +2,7 @@ import { getQueueToken } from '@nestjs/bullmq';
 import type { INestApplication } from '@nestjs/common';
 import { apiEnvSchema, loadEnv } from '@wintel/config';
 import { createPrismaClient, type PrismaClient } from '@wintel/database';
-import { WEBSITE_CRAWL_QUEUE, healthCheckResponseSchema } from '@wintel/types';
+import { SCAN_AUDIT_QUEUE, WEBSITE_CRAWL_QUEUE, healthCheckResponseSchema } from '@wintel/types';
 import type { Queue } from 'bullmq';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -107,6 +107,7 @@ describe('scans', () => {
   let prisma: PrismaClient;
   let cookie: string;
   let websiteId: string;
+  let scanId: string;
 
   beforeAll(async () => {
     prisma = createPrismaClient({ databaseUrl: process.env.DATABASE_URL ?? '' });
@@ -139,6 +140,7 @@ describe('scans', () => {
 
   afterAll(async () => {
     await app.get<Queue>(getQueueToken(WEBSITE_CRAWL_QUEUE)).obliterate({ force: true });
+    await app.get<Queue>(getQueueToken(SCAN_AUDIT_QUEUE)).obliterate({ force: true });
     await prisma.$disconnect();
   });
 
@@ -174,6 +176,7 @@ describe('scans', () => {
       .set('Cookie', cookie);
     expect(first.status).toBe(202);
     expect(first.body.status).toBe('queued');
+    scanId = first.body.id;
 
     const second = await request(app.getHttpServer())
       .post(`/api/v1/websites/${websiteId}/scans`)
@@ -200,5 +203,37 @@ describe('scans', () => {
       .set('Cookie', cookie);
 
     expect(response.status).toBe(400);
+  });
+
+  it('serves the audit rule catalog to members', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/api/v1/audit-rules')
+      .set('Cookie', cookie);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveLength(15);
+  });
+
+  it('rejects an unauthenticated audit read with 401', async () => {
+    const response = await request(app.getHttpServer()).get('/api/v1/audit-rules');
+
+    expect(response.status).toBe(401);
+  });
+
+  it('404s the audit of a scan that has none', async () => {
+    const response = await request(app.getHttpServer())
+      .get(`/api/v1/scans/${scanId}/audit`)
+      .set('Cookie', cookie);
+
+    expect(response.status).toBe(404);
+  });
+
+  it('refuses to re-run the audit of a scan that has not completed', async () => {
+    const response = await request(app.getHttpServer())
+      .post(`/api/v1/scans/${scanId}/audit`)
+      .set('Cookie', cookie);
+
+    expect(response.status).toBe(409);
+    expect(response.body.details).toEqual({ code: 'SCAN_NOT_COMPLETED' });
   });
 });

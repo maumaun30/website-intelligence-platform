@@ -8,6 +8,7 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { ApiConfigModule } from './config/api-config.module';
 import { PrismaModule } from './infrastructure/prisma/prisma.module';
 import { RedisModule } from './infrastructure/redis/redis.module';
+import { AuditsModule } from './modules/audits/audits.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
 import { ScansModule } from './modules/scans/scans.module';
@@ -51,6 +52,7 @@ export class AppModule {
         AuthModule,
         WebsitesModule,
         ScansModule,
+        AuditsModule,
         HealthModule,
       ],
       providers: [AllExceptionsFilter],

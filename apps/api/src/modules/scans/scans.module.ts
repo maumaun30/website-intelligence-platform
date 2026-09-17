@@ -13,5 +13,6 @@ import { WebsiteCrawlQueueService } from './website-crawl-queue.service';
   imports: [WebsitesModule, BullModule.registerQueue({ name: WEBSITE_CRAWL_QUEUE })],
   controllers: [ScansController],
   providers: [ScansService, ScansRepository, WebsiteCrawlQueueService],
+  exports: [ScansService],
 })
 export class ScansModule {}
