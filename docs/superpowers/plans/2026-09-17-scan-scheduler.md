@@ -599,19 +599,23 @@ describe('ScanSchedulerProcessor', () => {
 
   it('starts nothing when another tick already claimed the website', async () => {
     const website = await seedWebsite({});
-    const tick = processor();
-    const findMany = prisma.website.findMany.bind(prisma.website);
-    const spy = vi.spyOn(prisma.website, 'findMany').mockImplementationOnce(async (args) => {
-      const rows = await findMany(args as never);
-      await prisma.website.update({
-        where: { id: website.id },
-        data: { nextScanAt: new Date(NOW.getTime() + DAY) },
-      });
-      return rows;
-    });
+    // Simulates another tick claiming the website between selection and claim.
+    class RacingProcessor extends ScanSchedulerProcessor {
+      override async findDue(now: Date) {
+        const rows = await super.findDue(now);
+        await prisma.website.update({
+          where: { id: website.id },
+          data: { nextScanAt: new Date(NOW.getTime() + DAY) },
+        });
+        return rows;
+      }
+    }
 
-    await tick.runTick(NOW);
-    spy.mockRestore();
+    await new RacingProcessor(
+      { client: prisma } as never,
+      crawlQueue as never,
+      logger as never,
+    ).runTick(NOW);
 
     expect(crawlJobsFor(website.id)).toEqual([]);
     expect(await prisma.scan.count({ where: { websiteId: website.id } })).toBe(0);
@@ -705,7 +709,7 @@ export class ScanSchedulerProcessor extends WorkerHost {
     return summary;
   }
 
-  findDue(now: Date) {
+  async findDue(now: Date) {
     return this.prisma.client.website.findMany({
       where: {
         verificationStatus: 'verified',
