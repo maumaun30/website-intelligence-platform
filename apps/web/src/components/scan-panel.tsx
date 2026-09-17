@@ -3,6 +3,7 @@
 import type { ScanStatus, ScanStopReason, Website } from '@wintel/types';
 import { Badge, Button, Card } from '@wintel/ui';
 
+import { AuditSection } from '@/components/audit-section';
 import { ScanPagesTable } from '@/components/scan-pages-table';
 import { isActiveScan, useScans, useStartScan } from '@/lib/use-scans';
 
@@ -65,6 +66,7 @@ export function ScanPanel({ website }: { website: Website }) {
               <p className="text-xs text-destructive">{latest.error}</p>
             )}
           </div>
+          {latest.status === 'completed' ? <AuditSection scanId={latest.id} /> : null}
           <ScanPagesTable scanId={latest.id} pagesCrawled={latest.pagesCrawled} />
         </div>
       )}

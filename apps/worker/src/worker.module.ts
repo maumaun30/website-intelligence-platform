@@ -9,6 +9,7 @@ import { PrismaModule } from './infrastructure/prisma/prisma.module';
 import { RedisModule } from './infrastructure/redis/redis.module';
 import { EmailModule } from './queues/email/email.module';
 import { ExampleModule } from './queues/example/example.module';
+import { ScanAuditModule } from './queues/scan-audit/scan-audit.module';
 import { WebsiteCrawlModule } from './queues/website-crawl/website-crawl.module';
 import { WebsiteVerifyModule } from './queues/website-verify/website-verify.module';
 
@@ -48,6 +49,7 @@ export class WorkerModule {
         EmailModule,
         WebsiteVerifyModule,
         WebsiteCrawlModule,
+        ScanAuditModule,
         ExampleModule,
       ],
     };
