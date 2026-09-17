@@ -45,12 +45,27 @@ export const smtpEnvSchema = z.object({
   SMTP_FROM: z.string().min(1).default('Website Intelligence <no-reply@wintel.local>'),
 });
 
+/** AI explanations are off unless explicitly enabled; the API refuses requests while off. */
+export const aiApiEnvSchema = z.object({
+  AI_EXPLANATIONS_ENABLED: z.stringbool().default(false),
+});
+
+/**
+ * The worker's model access. The key is optional so the platform runs without AI; `fake` returns
+ * labeled deterministic text for local development and verification, and is never the default.
+ */
+export const aiWorkerEnvSchema = z.object({
+  ANTHROPIC_API_KEY: z.string().min(1).optional(),
+  AI_EXPLANATION_PROVIDER: z.enum(['anthropic', 'fake']).default('anthropic'),
+});
+
 export const apiEnvSchema = z.object({
   ...baseEnvSchema.shape,
   ...databaseEnvSchema.shape,
   ...redisEnvSchema.shape,
   ...appEnvSchema.shape,
   ...authEnvSchema.shape,
+  ...aiApiEnvSchema.shape,
   PORT: z.coerce.number().int().min(1).max(65535).default(4000),
   CORS_ORIGINS: z
     .string()
@@ -69,6 +84,7 @@ export const workerEnvSchema = z.object({
   ...redisEnvSchema.shape,
   ...appEnvSchema.shape,
   ...smtpEnvSchema.shape,
+  ...aiWorkerEnvSchema.shape,
   WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(100).default(5),
 });
 

@@ -149,3 +149,23 @@ export type {
   TrendPoint,
   TrendQuery,
 } from './insights';
+export {
+  ACTIVE_EXPLANATION_STATUSES,
+  AI_DAILY_LIMIT,
+  EXPLAIN_ISSUE_QUEUE,
+  EXPLANATION_MAX_ADVICE,
+  EXPLANATION_MAX_FIXES,
+  EXPLANATION_PAGE_LIMIT,
+  EXPLANATION_STATUSES,
+  explainIssueJobSchema,
+  explanationContentSchema,
+  explanationSchema,
+  requestExplanationInputSchema,
+} from './explanations';
+export type {
+  ExplainIssueJob,
+  Explanation,
+  ExplanationContent,
+  ExplanationStatus,
+  RequestExplanationInput,
+} from './explanations';
