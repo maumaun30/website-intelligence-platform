@@ -4,6 +4,7 @@ import { SCAN_FREQUENCIES, type Website, updateWebsiteInputSchema } from '@winte
 import { Button, Input, Label, Select, Textarea } from '@wintel/ui';
 import { type FormEvent, useState } from 'react';
 
+import { describeNextScan } from '@/lib/schedule-text';
 import { useUpdateWebsite } from '@/lib/use-websites';
 
 function toLines(values: string[]): string {
@@ -81,6 +82,9 @@ export function ScanConfigForm({ website }: { website: Website }) {
             </option>
           ))}
         </Select>
+        <p className="text-xs text-muted-foreground">
+          {describeNextScan(website.nextScanAt, new Date())}
+        </p>
       </div>
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" name="respectRobotsTxt" defaultChecked={website.respectRobotsTxt} />

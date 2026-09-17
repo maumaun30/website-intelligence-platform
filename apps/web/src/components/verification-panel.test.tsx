@@ -26,6 +26,7 @@ const website: Website = {
   excludePaths: [],
   scanFrequency: 'manual',
   respectRobotsTxt: true,
+  nextScanAt: null,
   createdAt: '2026-08-04T00:00:00.000Z',
   updatedAt: '2026-08-04T00:00:00.000Z',
 };

@@ -8,6 +8,7 @@ const scan: Scan = {
   websiteId: 'w1',
   organizationId: 'o1',
   status: 'queued',
+  trigger: 'manual',
   stopReason: null,
   startedAt: null,
   finishedAt: null,
