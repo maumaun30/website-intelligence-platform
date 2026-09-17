@@ -1,8 +1,9 @@
-import type {
-  AuditContext,
-  AuditPage,
-  AuditRuleImplementation,
-  IssueDraft,
+import {
+  type AuditContext,
+  type AuditPage,
+  type AuditRuleImplementation,
+  type IssueDraft,
+  ownPages,
 } from '../audit-context';
 
 function isBroken(page: AuditPage): boolean {
@@ -14,7 +15,7 @@ function isBroken(page: AuditPage): boolean {
 
 /** Internal links whose target was crawled in this scan. Unknown targets are never judged. */
 function* crawledTargets(ctx: AuditContext): Generator<{ source: AuditPage; target: AuditPage }> {
-  for (const source of ctx.pages) {
+  for (const source of ownPages(ctx)) {
     for (const link of ctx.links.get(source.id) ?? []) {
       const target = link.internal ? ctx.pageByUrl.get(link.url) : undefined;
       if (target) {

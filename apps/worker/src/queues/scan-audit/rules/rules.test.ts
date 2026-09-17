@@ -216,3 +216,44 @@ describe('content rules', () => {
     ]);
   });
 });
+
+describe('redirect aliases', () => {
+  it('audits a redirect whose target was crawled only as a link target', () => {
+    const shared = facts({ title: 'About', h1Count: 0 });
+    const ctx = context([
+      {
+        page: page('/'),
+        facts: facts(),
+        links: ['https://acme.test/old', 'https://acme.test/about'],
+      },
+      {
+        page: page('/old', { redirectedTo: 'https://acme.test/about', responseTimeMs: 3000 }),
+        facts: shared,
+        links: ['https://acme.test/boom'],
+      },
+      {
+        page: page('/about', { responseTimeMs: 3000 }),
+        facts: shared,
+        links: ['https://acme.test/boom'],
+      },
+      { page: page('/boom', { statusCode: 500 }) },
+    ]);
+
+    expect(run('missing-h1', ctx).map((issue) => issue.pageId)).toEqual(['/about']);
+    expect(run('duplicate-title', ctx)).toEqual([]);
+    expect(run('slow-response', ctx).map((issue) => issue.pageId)).toEqual(['/about']);
+    expect(run('broken-internal-link', ctx).map((issue) => issue.pageId)).toEqual(['/about']);
+    expect(run('redirected-link', ctx).map((issue) => issue.pageId)).toEqual(['/']);
+  });
+
+  it('still audits a redirect whose target was not crawled', () => {
+    const ctx = context([
+      {
+        page: page('/old', { redirectedTo: 'https://acme.test/elsewhere' }),
+        facts: facts({ h1Count: 0 }),
+      },
+    ]);
+
+    expect(run('missing-h1', ctx).map((issue) => issue.pageId)).toEqual(['/old']);
+  });
+});

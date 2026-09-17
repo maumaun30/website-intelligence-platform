@@ -1,5 +1,5 @@
 import { LARGE_PAGE_BYTES, SLOW_RESPONSE_MS } from '../audit.constants';
-import type { AuditPage, AuditRuleImplementation } from '../audit-context';
+import { type AuditPage, type AuditRuleImplementation, ownPages } from '../audit-context';
 
 /** A request that failed outright or a 5xx. Shared with the link rules' notion of "broken". */
 export function isServerFailure(page: AuditPage): boolean {
@@ -12,21 +12,23 @@ export function isServerFailure(page: AuditPage): boolean {
 export const serverErrorRule: AuditRuleImplementation = {
   id: 'server-error',
   evaluate: (ctx) =>
-    ctx.pages.filter(isServerFailure).map((page) => ({
-      pageId: page.id,
-      ruleId: 'server-error',
-      message:
-        page.statusCode === null
-          ? `The page could not be fetched: ${page.error ?? 'unknown error'}`
-          : `The page returned ${page.statusCode}`,
-      evidence: { statusCode: page.statusCode, error: page.error },
-    })),
+    ownPages(ctx)
+      .filter(isServerFailure)
+      .map((page) => ({
+        pageId: page.id,
+        ruleId: 'server-error',
+        message:
+          page.statusCode === null
+            ? `The page could not be fetched: ${page.error ?? 'unknown error'}`
+            : `The page returned ${page.statusCode}`,
+        evidence: { statusCode: page.statusCode, error: page.error },
+      })),
 };
 
 export const clientErrorRule: AuditRuleImplementation = {
   id: 'client-error',
   evaluate: (ctx) =>
-    ctx.pages
+    ownPages(ctx)
       .filter((page) => page.statusCode !== null && page.statusCode >= 400 && page.statusCode < 500)
       .map((page) => ({
         pageId: page.id,
@@ -39,7 +41,7 @@ export const clientErrorRule: AuditRuleImplementation = {
 export const slowResponseRule: AuditRuleImplementation = {
   id: 'slow-response',
   evaluate: (ctx) =>
-    ctx.pages
+    ownPages(ctx)
       .filter((page) => page.responseTimeMs !== null && page.responseTimeMs > SLOW_RESPONSE_MS)
       .map((page) => ({
         pageId: page.id,
@@ -52,7 +54,7 @@ export const slowResponseRule: AuditRuleImplementation = {
 export const largePageRule: AuditRuleImplementation = {
   id: 'large-page',
   evaluate: (ctx) =>
-    ctx.pages
+    ownPages(ctx)
       .filter((page) => page.byteSize !== null && page.byteSize > LARGE_PAGE_BYTES)
       .map((page) => ({
         pageId: page.id,
