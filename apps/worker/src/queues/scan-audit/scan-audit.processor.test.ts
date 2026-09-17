@@ -240,4 +240,20 @@ describe('ScanAuditProcessor', () => {
     await processor().process(job);
     expect(await prisma.issueChange.count({ where: { auditId: audit.id } })).toBe(5);
   });
+
+  it('drops explanations when the audit is re-run', async () => {
+    const { audit, job } = await seedAudit();
+    await prisma.explanation.create({
+      data: {
+        auditId: audit.id,
+        ruleId: 'missing-h1',
+        organizationId: audit.organizationId,
+        status: 'completed',
+      },
+    });
+
+    await processor().process(job);
+
+    expect(await prisma.explanation.count({ where: { auditId: audit.id } })).toBe(0);
+  });
 });

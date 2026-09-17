@@ -143,6 +143,7 @@ export class ScanAuditProcessor extends WorkerHost {
         async (tx) => {
           await tx.issue.deleteMany({ where: { auditId: data.auditId } });
           await tx.issueChange.deleteMany({ where: { auditId: data.auditId } });
+          await tx.explanation.deleteMany({ where: { auditId: data.auditId } });
           for (let start = 0; start < fingerprinted.length; start += ISSUE_INSERT_BATCH) {
             await tx.issue.createMany({
               data: fingerprinted.slice(start, start + ISSUE_INSERT_BATCH).map((issue) => ({
