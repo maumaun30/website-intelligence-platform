@@ -61,7 +61,7 @@ a `text/html` content type, and a stored `PageContent` row.
 
 | Rule id | Severity | Fires when | Evidence |
 |---|---|---|---|
-| `broken-internal-link` | critical | A page links to an internal URL whose `Page` in the same scan has `statusCode >= 400` or an `error` | `{ targetUrl, statusCode, error }` |
+| `broken-internal-link` | critical | A page links to an internal URL whose `Page` in the same scan has `statusCode >= 400`, or a request `error` with no status | `{ targetUrl, statusCode, error }` |
 | `server-error` | critical | A page has `statusCode >= 500`, or an `error` with no status | `{ statusCode, error }` |
 | `client-error` | warning | A page has `statusCode` 400–499 | `{ statusCode }` |
 | `missing-title` | warning | HTML page with no non-empty `<title>` | `{}` |
@@ -171,11 +171,13 @@ scan lookups). `AuditsService` owns the re-run rules. `ScanAuditQueueService` is
 | `rules/*.ts` + `AUDIT_RULE_IMPLEMENTATIONS` | One file per rule family; each rule `{ id, evaluate(ctx): IssueDraft[] }`. Severity and title come from `AUDIT_RULES`. |
 | `runAudit(ctx)` | Runs every rule, returns drafts plus per-severity counts. Pure. |
 | `ScanAuditProcessor` | Validates the job, claims `queued → running`, loads the context, runs rules, replaces issues (delete then `createMany` in batches of 500) and writes counts in one transaction, marks `completed`; on throw marks `failed` and rethrows. |
-| `ScanAuditQueueService` (worker) | Producer used by the crawl processor: upsert the scan's `Audit` as `queued`, then add the job. |
+| `ScanAuditQueueService` (worker) | Producer used by the crawl processor: `createQueuedAudit(scanId, organizationId)` upserts the scan's `Audit` as `queued`; `enqueue(audit)` adds the job. |
 
-The crawl processor gets one new step after `completed` + prune: `await auditQueue.enqueueForScan(scan)`.
-If enqueueing throws, the scan stays `completed` (its data is valid) and the error is logged; the
-admin can start the audit through the re-run endpoint.
+The crawl processor creates the queued audit **before** marking the scan `completed`, so a
+completed scan always has an audit row and the web app never sees a completed scan without one.
+After `completed` + prune it adds the job. If adding the job throws, the scan stays `completed` (its
+data is valid) and the error is logged; the audit stays `queued` until it goes stale, after which an
+admin can re-run it.
 
 ### Web (`@wintel/web`)
 
@@ -191,8 +193,8 @@ endpoint with `ruleId`.
 
 ## Data Flow
 
-1. Crawl processor marks a scan `completed`, prunes old content, upserts `Audit(queued)`, enqueues
-   `{ auditId, scanId }`.
+1. Crawl processor flushes pages, upserts `Audit(queued)`, marks the scan `completed`, prunes old
+   content, and enqueues `{ auditId, scanId }`.
 2. `ScanAuditProcessor` claims `queued → running`.
 3. `AuditContextLoader` pages through the scan in batches of 50: page rows, their links, their
    content → facts. HTML is dropped after each batch.
