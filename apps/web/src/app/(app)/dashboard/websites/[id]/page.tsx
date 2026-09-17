@@ -6,6 +6,7 @@ import { use } from 'react';
 import { ScanConfigForm } from '@/components/scan-config-form';
 import { ScanPanel } from '@/components/scan-panel';
 import { VerificationPanel } from '@/components/verification-panel';
+import { WebsiteScoreTile } from '@/components/website-score-tile';
 import { useWebsite } from '@/lib/use-websites';
 
 export default function WebsiteDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -26,6 +27,8 @@ export default function WebsiteDetailPage({ params }: { params: Promise<{ id: st
         <h1 className="text-2xl font-semibold tracking-tight">{data.name}</h1>
         <p className="text-sm text-muted-foreground">{data.url}</p>
       </header>
+
+      <WebsiteScoreTile websiteId={data.id} />
 
       <VerificationPanel website={data} />
 

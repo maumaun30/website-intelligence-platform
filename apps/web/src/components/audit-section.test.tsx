@@ -13,6 +13,8 @@ vi.mock('@/lib/use-audits', () => ({
   useRuleIssues: () => ({ data: undefined, isPending: true, isError: false }),
 }));
 
+vi.mock('@/components/audit-changes', () => ({ AuditChanges: () => null }));
+
 import { AuditSection } from './audit-section';
 
 function makeAudit(overrides: Partial<Audit>): Audit {
@@ -24,6 +26,11 @@ function makeAudit(overrides: Partial<Audit>): Audit {
     criticalCount: 1,
     warningCount: 3,
     noticeCount: 0,
+    score: null,
+    scoreDelta: null,
+    newIssueCount: null,
+    fixedIssueCount: null,
+    previousAuditId: null,
     startedAt: '2026-09-17T00:00:00.000Z',
     finishedAt: '2026-09-17T00:00:01.000Z',
     error: null,
