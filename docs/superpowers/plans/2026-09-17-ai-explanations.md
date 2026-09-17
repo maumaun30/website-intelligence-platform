@@ -840,7 +840,7 @@ export class FakeExplanationGenerator implements ExplanationGenerator {
 }
 
 export class UnconfiguredExplanationGenerator implements ExplanationGenerator {
-  generate(): Promise<GeneratedExplanation> {
+  generate(_input: ExplanationInput): Promise<GeneratedExplanation> {
     return Promise.reject(new ExplanationsNotConfiguredError());
   }
 }
