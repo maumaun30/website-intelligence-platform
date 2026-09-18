@@ -98,3 +98,27 @@ describe('workerEnvSchema', () => {
     expect(env.SMTP_PORT).toBe(2525);
   });
 });
+describe('AI settings', () => {
+  const base = {
+    DATABASE_URL: 'postgresql://u:p@localhost:5432/db',
+    REDIS_URL: 'redis://localhost:6379',
+  };
+
+  it('keeps AI explanations off unless enabled', () => {
+    const api = apiEnvSchema.parse({ ...base, BETTER_AUTH_SECRET: 'x'.repeat(32) });
+    expect(api.AI_EXPLANATIONS_ENABLED).toBe(false);
+    expect(
+      apiEnvSchema.parse({
+        ...base,
+        BETTER_AUTH_SECRET: 'x'.repeat(32),
+        AI_EXPLANATIONS_ENABLED: 'true',
+      }).AI_EXPLANATIONS_ENABLED,
+    ).toBe(true);
+  });
+
+  it('defaults the worker to the anthropic provider with no key', () => {
+    const worker = workerEnvSchema.parse(base);
+    expect(worker.AI_EXPLANATION_PROVIDER).toBe('anthropic');
+    expect(worker.ANTHROPIC_API_KEY).toBeUndefined();
+  });
+});

@@ -294,9 +294,10 @@ model Audit {
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
-  scan    Scan          @relation(fields: [scanId], references: [id], onDelete: Cascade)
-  issues  Issue[]
-  changes IssueChange[]
+  scan         Scan          @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  issues       Issue[]
+  changes      IssueChange[]
+  explanations Explanation[]
 
   @@index([organizationId])
   @@map("audit")
@@ -344,4 +345,35 @@ model IssueChange {
 
   @@index([auditId, kind])
   @@map("issue_change")
+}
+
+enum ExplanationStatus {
+  queued
+  running
+  completed
+  failed
+}
+
+model Explanation {
+  id              String            @id @default(uuid())
+  auditId         String
+  ruleId          String
+  organizationId  String
+  status          ExplanationStatus @default(queued)
+  content         Json?
+  model           String?
+  inputTokens     Int?
+  outputTokens    Int?
+  cacheReadTokens Int?
+  error           String?
+  requestedById   String?
+  requestedAt     DateTime          @default(now())
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  audit Audit @relation(fields: [auditId], references: [id], onDelete: Cascade)
+
+  @@unique([auditId, ruleId])
+  @@index([organizationId, requestedAt])
+  @@map("explanation")
 }

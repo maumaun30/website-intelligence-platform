@@ -17,7 +17,9 @@ canonicals, noindex, slow and large pages — with issues grouped by rule in the
 re-runnable without re-crawling). Websites set to daily or weekly are scanned and audited on
 that schedule automatically. Each audit gets a 0–100 health score and a list of issues new or
 fixed since the previous audit; the dashboard ranks all websites by health and each website shows
-its score trend.
+its score trend. Optionally, Claude explains a rule's findings for the affected pages
+with concrete fixes (set `AI_EXPLANATIONS_ENABLED=true` for the API and `ANTHROPIC_API_KEY` for the
+worker).
 
 ## Requirements
 

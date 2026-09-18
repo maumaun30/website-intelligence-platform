@@ -9,6 +9,7 @@ import { ApiConfigModule } from './config/api-config.module';
 import { PrismaModule } from './infrastructure/prisma/prisma.module';
 import { RedisModule } from './infrastructure/redis/redis.module';
 import { AuditsModule } from './modules/audits/audits.module';
+import { ExplanationsModule } from './modules/explanations/explanations.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
 import { InsightsModule } from './modules/insights/insights.module';
@@ -55,6 +56,7 @@ export class AppModule {
         ScansModule,
         AuditsModule,
         InsightsModule,
+        ExplanationsModule,
         HealthModule,
       ],
       providers: [AllExceptionsFilter],

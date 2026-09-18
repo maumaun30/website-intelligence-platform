@@ -4,6 +4,7 @@ import { AUDIT_RULES, type AuditRuleId, type IssueSeverity } from '@wintel/types
 import { Badge, Button } from '@wintel/ui';
 import { useState } from 'react';
 
+import { AiExplanation } from '@/components/ai-explanation';
 import { ISSUE_PAGE_SIZE, useRuleIssues } from '@/lib/use-audits';
 
 export const SEVERITY_VARIANT: Record<IssueSeverity, 'destructive' | 'default' | 'outline'> = {
@@ -47,6 +48,7 @@ export function AuditRuleGroup({
       {open ? (
         <div className="flex flex-col gap-2 border-t border-border px-3 py-2">
           <p className="text-xs text-muted-foreground">{rule.description}</p>
+          <AiExplanation scanId={scanId} ruleId={ruleId} />
           {issues.isPending ? (
             <p className="text-xs text-muted-foreground">Loading pages…</p>
           ) : issues.isError ? (
