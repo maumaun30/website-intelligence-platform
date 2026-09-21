@@ -123,6 +123,27 @@ export {
 } from './schedule';
 export type { ActiveScanSnapshot, ScanStartDecision, ScanStartRefusal } from './schedule';
 export {
+  ORGANIZATION_PLANS,
+  PLAN_LIMITS,
+  billingStateSchema,
+  changePlanInputSchema,
+  effectivePageCap,
+  evaluatePlanChange,
+  evaluateQuota,
+  planChangeResultSchema,
+  planLimitsSchema,
+  startOfUtcMonth,
+} from './billing';
+export type {
+  BillingState,
+  ChangePlanInput,
+  OrganizationPlan,
+  PlanChangeResult,
+  PlanLimits,
+  QuotaDecision,
+  QuotaQuery,
+} from './billing';
+export {
   HEALTH_SCORE_WEIGHTS,
   ISSUE_CHANGE_KINDS,
   TREND_DEFAULT_LIMIT,
