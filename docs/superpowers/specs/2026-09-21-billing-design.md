@@ -73,18 +73,18 @@ export const PLAN_LIMITS = {
   agency: { websites: 50, pagesPerScan: 10000, scanFrequencies: ['manual', 'daily', 'weekly'], aiExplanationsPerMonth: 500 },
 } as const satisfies Record<OrganizationPlan, PlanLimits>;
 
-export type QuotaKind = 'websites' | 'scanFrequency' | 'aiExplanations';
-
+/** Countable refusals carry the numbers the UI shows; the other two do not. */
 export type QuotaDecision =
   | { allowed: true }
-  | { allowed: false; code: QuotaRefusalCode; limit: number; current: number };
+  | { allowed: false; code: 'PLAN_WEBSITE_LIMIT' | 'PLAN_AI_LIMIT'; limit: number; current: number }
+  | { allowed: false; code: 'PLAN_SCAN_FREQUENCY' | 'PLAN_AI_LOCKED' };
 
-export function evaluateQuota(input: {
-  plan: OrganizationPlan;
-  kind: QuotaKind;
-  current?: number;
-  scanFrequency?: ScanFrequency;
-}): QuotaDecision;
+export type QuotaQuery =
+  | { plan: OrganizationPlan; kind: 'websites'; current: number }
+  | { plan: OrganizationPlan; kind: 'aiExplanations'; current: number }
+  | { plan: OrganizationPlan; kind: 'scanFrequency'; scanFrequency: ScanFrequency };
+
+export function evaluateQuota(query: QuotaQuery): QuotaDecision;
 
 export function effectivePageCap(plan: OrganizationPlan, websiteMaxPages: number): number;
 
@@ -94,8 +94,9 @@ export function evaluatePlanChange(input: {
 }): { frequencyDowngrades: string[] };
 ```
 
-The scan job payload (`scan-jobs.ts`) gains `pageCap: number`, set by whoever enqueues the scan
-(API or scheduler) from `effectivePageCap`. The crawler reads it instead of `website.maxPages`.
+The crawl job payload already carries `maxPages`; whoever enqueues a scan (API or scheduler) now
+sets it to `effectivePageCap(plan, website.maxPages)` rather than the raw column. No payload
+change, and the crawler is untouched.
 
 Refusal codes: `PLAN_WEBSITE_LIMIT`, `PLAN_SCAN_FREQUENCY`, `PLAN_AI_LIMIT`, `PLAN_AI_LOCKED`.
 `AI_DAILY_LIMIT` and `startOfUtcDay`'s use in the explanations path are removed; a
@@ -106,9 +107,10 @@ Refusal codes: `PLAN_WEBSITE_LIMIT`, `PLAN_SCAN_FREQUENCY`, `PLAN_AI_LIMIT`, `PL
 New `apps/api/src/modules/billing/` following the insights/explanations layout (repository,
 service, controller, module).
 
-- `GET /organizations/:orgId/billing` — any member. Returns
+- `GET /billing` — any member, scoped to the principal's active organization (the pattern every
+  other controller uses; no organization id in the path). Returns
   `{ plan, limits, usage: { websites, aiExplanationsThisMonth }, plans: PLAN_LIMITS }`.
-- `POST /organizations/:orgId/billing/plan` — owner only, body `{ plan }`. Runs
+- `POST /billing/plan` — `@Roles('owner')`, body `{ plan }`. Runs
   `evaluatePlanChange`, then in one transaction updates `Organization.plan` and sets
   `scanFrequency = manual, nextScanAt = null` on the listed websites. Returns the new billing state
   plus `downgradedWebsites: string[]`. Switching to the current plan is a no-op `200`.
@@ -119,7 +121,7 @@ Enforcement in existing services:
 |---|---|---|
 | `WebsitesService.create` | `evaluateQuota({ kind: 'websites', current: count })` | `403 PLAN_WEBSITE_LIMIT` |
 | `WebsitesService.create` / `update` | `evaluateQuota({ kind: 'scanFrequency', scanFrequency })` | `403 PLAN_SCAN_FREQUENCY` |
-| `ScansService.startScan` | `effectivePageCap(plan, website.maxPages)` passed into the scan job | clamped, no refusal |
+| `ScansService.start` | `effectivePageCap(plan, website.maxPages)` passed as the job's `maxPages` | clamped, no refusal |
 | `ExplanationsService.request` | `evaluateQuota({ kind: 'aiExplanations', current: monthCount })` | `403 PLAN_AI_LOCKED` when the limit is `0`, else `403 PLAN_AI_LIMIT` |
 
 Error bodies keep the existing shape: `{ message, details: { code } }`.
@@ -129,8 +131,8 @@ Error bodies keep the existing shape: `{ message, details: { code } }`.
 - `ScanSchedulerProcessor`: after `evaluateScanStart` returns a go decision, re-check the
   website's organization plan against `scanFrequency`. No longer allowed → skip the scan, clear
   `nextScanAt`, and reset the website to `manual` (an organization can downgrade between ticks).
-- `ScanProcessor`: uses the page cap carried on the job payload rather than reading
-  `website.maxPages` directly, so API and scheduler apply the same clamp.
+- `ScanSchedulerProcessor` enqueues with the clamped `maxPages` too, so scheduled and manual scans
+  obey the same ceiling. The crawler itself needs no change — it already honours the payload.
 - `ExplainIssueProcessor`: re-check the month count before the Claude call. Over quota → `failed`
   with the refusal code and `UnrecoverableError`, so a job queued before a downgrade cannot spend.
 
@@ -145,7 +147,9 @@ Error bodies keep the existing shape: `{ message, details: { code } }`.
   `maxPages` field shows the plan ceiling.
 - AI explanation panel: shows remaining explanations for the month; on `free` the request button
   is replaced by an upgrade link.
-- Dashboard: a plan badge next to the organization name.
+- The add-website form shows the `PLAN_WEBSITE_LIMIT` refusal with a link to the billing page.
+- Navigation gains a "Plan" link. No plan badge elsewhere — the billing page is the one place that
+  states the plan.
 
 ## Error Handling
 
