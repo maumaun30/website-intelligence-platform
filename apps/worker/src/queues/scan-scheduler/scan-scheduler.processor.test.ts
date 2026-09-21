@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { createPrismaClient, type PrismaClient } from '@wintel/database';
-import { SCAN_DEADLINE_MS } from '@wintel/types';
+import { SCAN_DEADLINE_MS, type OrganizationPlan } from '@wintel/types';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ScanSchedulerProcessor } from './scan-scheduler.processor';
@@ -20,6 +20,10 @@ async function seedWebsite(overrides: {
   verificationStatus?: 'pending' | 'verified' | 'failed';
   scanFrequency?: 'manual' | 'daily' | 'weekly';
   nextScanAt?: Date | null;
+  // Pre-existing fixtures use 'agency' so their maxPages/frequency expectations are unaffected by
+  // the plan re-check; tests about the re-check itself pass the plan they need.
+  plan?: OrganizationPlan;
+  maxPages?: number;
 }) {
   const userId = randomUUID();
   const organizationId = randomUUID();
@@ -29,7 +33,12 @@ async function seedWebsite(overrides: {
     data: { id: userId, name: 'U', email: `${userId}@example.com`, emailVerified: true },
   });
   await prisma.organization.create({
-    data: { id: organizationId, name: 'O', slug: `o-${organizationId.slice(0, 8)}` },
+    data: {
+      id: organizationId,
+      name: 'O',
+      slug: `o-${organizationId.slice(0, 8)}`,
+      plan: overrides.plan ?? 'agency',
+    },
   });
   return prisma.website.create({
     data: {
@@ -43,6 +52,7 @@ async function seedWebsite(overrides: {
       scanFrequency: overrides.scanFrequency ?? 'daily',
       nextScanAt: overrides.nextScanAt === undefined ? PAST : overrides.nextScanAt,
       excludePaths: ['/admin'],
+      ...(overrides.maxPages === undefined ? {} : { maxPages: overrides.maxPages }),
     },
   });
 }
@@ -194,5 +204,26 @@ describe('ScanSchedulerProcessor', () => {
     expect(crawlJobsFor(first.id)).toHaveLength(1);
     expect(crawlJobsFor(second.id)).toHaveLength(1);
     expect(logger.error).toHaveBeenCalled();
+  });
+
+  it('resets a due website whose plan no longer allows its frequency', async () => {
+    const website = await seedWebsite({ plan: 'free', scanFrequency: 'daily' });
+
+    const summary = await processor().runTick(NOW);
+
+    expect(summary).toMatchObject({ due: 1, started: 0, skipped: 1 });
+    expect(crawlJobsFor(website.id)).toEqual([]);
+    const reread = await prisma.website.findUniqueOrThrow({ where: { id: website.id } });
+    expect(reread).toMatchObject({ scanFrequency: 'manual', nextScanAt: null });
+  });
+
+  it('clamps the enqueued page cap to the organization plan', async () => {
+    const website = await seedWebsite({ plan: 'pro', maxPages: 5000 });
+
+    await processor().runTick(NOW);
+
+    const jobs = crawlJobsFor(website.id);
+    expect(jobs).toHaveLength(1);
+    expect(jobs[0]![1]).toMatchObject({ maxPages: 1000 });
   });
 });

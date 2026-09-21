@@ -1,7 +1,12 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Inject } from '@nestjs/common';
 import type { Prisma } from '@wintel/database';
-import { EXPLAIN_ISSUE_QUEUE, explainIssueJobSchema } from '@wintel/types';
+import {
+  EXPLAIN_ISSUE_QUEUE,
+  evaluateQuota,
+  explainIssueJobSchema,
+  startOfUtcMonth,
+} from '@wintel/types';
 import { type Job, UnrecoverableError } from 'bullmq';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 
@@ -55,6 +60,31 @@ export class ExplainIssueProcessor extends WorkerHost {
     }
 
     const explanation = await explanations.findUniqueOrThrow({ where: { id: explanationId } });
+
+    // The API checked the quota when the job was queued; a downgrade since then must not spend.
+    const organization = await this.prisma.client.organization.findUnique({
+      where: { id: explanation.organizationId },
+      select: { plan: true },
+    });
+    const decision = evaluateQuota({
+      plan: organization?.plan ?? 'free',
+      kind: 'aiExplanations',
+      current: await this.prisma.client.explanation.count({
+        where: {
+          organizationId: explanation.organizationId,
+          requestedAt: { gte: startOfUtcMonth(new Date()) },
+          status: 'completed',
+        },
+      }),
+    });
+    if (!decision.allowed) {
+      await explanations.update({
+        where: { id: explanationId },
+        data: { status: 'failed', error: decision.code },
+      });
+      throw new UnrecoverableError(decision.code);
+    }
+
     try {
       const input = await this.buildInput(this.prisma.client, explanation);
       const result = await this.generator.generate(input);

@@ -1,11 +1,13 @@
 import { InjectQueue, Processor, WorkerHost } from '@nestjs/bullmq';
 import {
   ACTIVE_SCAN_STATUSES,
+  PLAN_LIMITS,
   SCAN_SCHEDULER_QUEUE,
   SCHEDULER_BATCH_SIZE,
   WEBSITE_CRAWL_QUEUE,
   type WebsiteCrawlJob,
   computeNextScanAt,
+  effectivePageCap,
   evaluateScanStart,
 } from '@wintel/types';
 import { Queue } from 'bullmq';
@@ -76,6 +78,7 @@ export class ScanSchedulerProcessor extends WorkerHost {
       },
       orderBy: { nextScanAt: 'asc' },
       take: SCHEDULER_BATCH_SIZE,
+      include: { organization: { select: { plan: true } } },
     });
   }
 
@@ -87,6 +90,16 @@ export class ScanSchedulerProcessor extends WorkerHost {
       data: { nextScanAt: computeNextScanAt(website.scanFrequency, now) },
     });
     if (count === 0) {
+      return false;
+    }
+
+    // An organization can downgrade between ticks: a schedule the plan no longer allows stops here
+    // and falls back to manual rather than silently running on.
+    if (!PLAN_LIMITS[website.organization.plan].scanFrequencies.includes(website.scanFrequency)) {
+      await client.website.updateMany({
+        where: { id: website.id },
+        data: { scanFrequency: 'manual', nextScanAt: null },
+      });
       return false;
     }
 
@@ -125,7 +138,7 @@ export class ScanSchedulerProcessor extends WorkerHost {
         url: website.url,
         domain: website.domain,
         maxDepth: website.maxDepth,
-        maxPages: website.maxPages,
+        maxPages: effectivePageCap(website.organization.plan, website.maxPages),
         includePaths: website.includePaths,
         excludePaths: website.excludePaths,
         respectRobotsTxt: website.respectRobotsTxt,

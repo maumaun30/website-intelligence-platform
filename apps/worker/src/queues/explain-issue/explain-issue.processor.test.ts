@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { createPrismaClient, type PrismaClient } from '@wintel/database';
+import type { OrganizationPlan } from '@wintel/types';
 import { UnrecoverableError, type Job } from 'bullmq';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
@@ -13,14 +14,21 @@ const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 const input = { pages: [] } as unknown as ExplanationInput;
 const buildInput = vi.fn().mockResolvedValue(input);
 
-async function seedExplanation() {
+async function seedExplanation(options: { plan?: OrganizationPlan; priorCompleted?: number } = {}) {
   const userId = randomUUID();
   const organizationId = randomUUID();
   await prisma.user.create({
     data: { id: userId, name: 'U', email: `${userId}@example.com`, emailVerified: true },
   });
   await prisma.organization.create({
-    data: { id: organizationId, name: 'O', slug: `o-${organizationId.slice(0, 8)}` },
+    data: {
+      id: organizationId,
+      name: 'O',
+      slug: `o-${organizationId.slice(0, 8)}`,
+      // 'pro' by default so pre-existing tests (unrelated to the quota re-check) still call the
+      // model; the quota test overrides both the plan and how many completed rows already exist.
+      plan: options.plan ?? 'pro',
+    },
   });
   const website = await prisma.website.create({
     data: {
@@ -38,6 +46,17 @@ async function seedExplanation() {
   const audit = await prisma.audit.create({
     data: { scanId: scan.id, organizationId, status: 'completed' },
   });
+  const priorCompleted = options.priorCompleted ?? 0;
+  if (priorCompleted > 0) {
+    await prisma.explanation.createMany({
+      data: Array.from({ length: priorCompleted }, (_, i) => ({
+        auditId: audit.id,
+        ruleId: `prior-rule-${i}`,
+        organizationId,
+        status: 'completed' as const,
+      })),
+    });
+  }
   return prisma.explanation.create({
     data: { auditId: audit.id, ruleId: 'missing-h1', organizationId },
   });
@@ -137,5 +156,18 @@ describe('ExplainIssueProcessor', () => {
     await processor(generate).process(job(explanation.id));
 
     expect(generate).not.toHaveBeenCalled();
+  });
+
+  it('fails a job whose organization is over its monthly AI quota, without calling the model', async () => {
+    const explanation = await seedExplanation({ plan: 'pro', priorCompleted: 100 });
+    const generate = vi.fn();
+
+    await expect(processor(generate).process(job(explanation.id))).rejects.toBeInstanceOf(
+      UnrecoverableError,
+    );
+
+    expect(generate).not.toHaveBeenCalled();
+    const stored = await prisma.explanation.findUniqueOrThrow({ where: { id: explanation.id } });
+    expect(stored).toMatchObject({ status: 'failed', error: 'PLAN_AI_LIMIT' });
   });
 });
