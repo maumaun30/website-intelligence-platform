@@ -100,12 +100,21 @@ model Verification {
   @@map("verification")
 }
 
+/// What an organization is allowed to do. Payment is not modelled yet — slice 9 maps Stripe
+/// prices onto these same members.
+enum OrganizationPlan {
+  free
+  pro
+  agency
+}
+
 model Organization {
   id        String   @id
   name      String
   slug      String
   logo      String?
   metadata  String?
+  plan      OrganizationPlan @default(free)
   createdAt DateTime @default(now())
 
   members     Member[]
