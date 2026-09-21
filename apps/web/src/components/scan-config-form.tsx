@@ -5,6 +5,7 @@ import { Button, Input, Label, Select, Textarea } from '@wintel/ui';
 import { type FormEvent, useState } from 'react';
 
 import { describeNextScan } from '@/lib/schedule-text';
+import { useBilling } from '@/lib/use-billing';
 import { useUpdateWebsite } from '@/lib/use-websites';
 
 function toLines(values: string[]): string {
@@ -22,6 +23,8 @@ function fromLines(value: FormDataEntryValue | null): string[] {
 export function ScanConfigForm({ website }: { website: Website }) {
   const update = useUpdateWebsite(website.id);
   const [error, setError] = useState<string | null>(null);
+  const billing = useBilling();
+  const allowedFrequencies = billing.data?.limits.scanFrequencies ?? SCAN_FREQUENCIES;
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -55,6 +58,11 @@ export function ScanConfigForm({ website }: { website: Website }) {
         <div className="flex flex-1 flex-col gap-2">
           <Label htmlFor="maxPages">Max pages</Label>
           <Input id="maxPages" name="maxPages" type="number" defaultValue={website.maxPages} />
+          {billing.data ? (
+            <p className="text-xs text-muted-foreground">
+              Your plan crawls at most {billing.data.limits.pagesPerScan} pages per scan.
+            </p>
+          ) : null}
         </div>
       </div>
       <div className="flex flex-col gap-2">
@@ -77,7 +85,11 @@ export function ScanConfigForm({ website }: { website: Website }) {
         <Label htmlFor="scanFrequency">Frequency</Label>
         <Select id="scanFrequency" name="scanFrequency" defaultValue={website.scanFrequency}>
           {SCAN_FREQUENCIES.map((frequency) => (
-            <option key={frequency} value={frequency}>
+            <option
+              key={frequency}
+              value={frequency}
+              disabled={!allowedFrequencies.includes(frequency)}
+            >
               {frequency}
             </option>
           ))}
@@ -85,6 +97,14 @@ export function ScanConfigForm({ website }: { website: Website }) {
         <p className="text-xs text-muted-foreground">
           {describeNextScan(website.nextScanAt, new Date())}
         </p>
+        {allowedFrequencies.length === 1 ? (
+          <p className="text-xs text-muted-foreground">
+            Scheduled scans need a paid plan.{' '}
+            <a className="underline" href="/dashboard/billing">
+              See plans
+            </a>
+          </p>
+        ) : null}
       </div>
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" name="respectRobotsTxt" defaultChecked={website.respectRobotsTxt} />

@@ -20,6 +20,12 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           >
             Websites
           </Link>
+          <Link
+            href="/dashboard/billing"
+            className="text-sm text-muted-foreground hover:text-foreground"
+          >
+            Plan
+          </Link>
         </nav>
         <div className="flex items-center gap-4">
           <span className="text-sm text-muted-foreground">{user.email}</span>

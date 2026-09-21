@@ -1,7 +1,12 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { CreateWebsiteInput, UpdateWebsiteInput, VerificationMethod } from '@wintel/types';
+import type {
+  CreateWebsiteInput,
+  UpdateWebsiteInput,
+  VerificationMethod,
+  Website,
+} from '@wintel/types';
 
 import {
   createWebsite,
@@ -10,6 +15,7 @@ import {
   listWebsites,
   updateWebsite,
   verifyWebsite,
+  type WebsiteRequestError,
 } from './websites-client';
 
 export function useWebsites() {
@@ -23,8 +29,8 @@ export function useWebsite(id: string) {
 export function useCreateWebsite() {
   const client = useQueryClient();
 
-  return useMutation({
-    mutationFn: (input: CreateWebsiteInput) => createWebsite(input),
+  return useMutation<Website, WebsiteRequestError, CreateWebsiteInput>({
+    mutationFn: (input) => createWebsite(input),
     onSuccess: () => client.invalidateQueries({ queryKey: ['websites'] }),
   });
 }

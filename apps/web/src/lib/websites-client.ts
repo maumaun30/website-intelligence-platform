@@ -11,6 +11,16 @@ import { ApiError } from './api-client';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 const websiteListSchema = websiteSchema.array();
 
+/** An API error that also carries the server's machine-readable `details.code`. */
+export class WebsiteRequestError extends ApiError {
+  constructor(
+    status: number,
+    readonly code: string | null,
+  ) {
+    super(`Website request failed (${status})`, status);
+  }
+}
+
 /** Every call is cookie-authenticated and tenant-scoped server-side by the caller's active org. */
 async function request(path: string, init?: RequestInit): Promise<Response> {
   const response = await fetch(`${API_BASE_URL}/api/v1/websites${path}`, {
@@ -21,7 +31,10 @@ async function request(path: string, init?: RequestInit): Promise<Response> {
   });
 
   if (!response.ok) {
-    throw new ApiError(`Website request failed (${response.status})`, response.status);
+    const body = (await response.json().catch(() => null)) as {
+      details?: { code?: string };
+    } | null;
+    throw new WebsiteRequestError(response.status, body?.details?.code ?? null);
   }
 
   return response;

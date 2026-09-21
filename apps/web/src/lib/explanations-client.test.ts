@@ -51,7 +51,7 @@ describe('explanations-client', () => {
       'fetch',
       vi.fn(() =>
         Promise.resolve(
-          new Response(JSON.stringify({ details: { code: 'AI_DAILY_LIMIT' } }), { status: 429 }),
+          new Response(JSON.stringify({ details: { code: 'PLAN_AI_LIMIT' } }), { status: 403 }),
         ),
       ),
     );
@@ -59,8 +59,8 @@ describe('explanations-client', () => {
     await expect(
       requestExplanation('s1', { ruleId: 'missing-h1', regenerate: false }),
     ).rejects.toMatchObject({
-      status: 429,
-      code: 'AI_DAILY_LIMIT',
+      status: 403,
+      code: 'PLAN_AI_LIMIT',
     });
   });
 });

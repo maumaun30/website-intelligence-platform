@@ -2,8 +2,9 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const mutate = vi.fn();
+let createError: { code?: string } | null = null;
 vi.mock('@/lib/use-websites', () => ({
-  useCreateWebsite: () => ({ mutate, isPending: false, error: null }),
+  useCreateWebsite: () => ({ mutate, isPending: false, error: createError }),
 }));
 
 import { AddWebsiteForm } from './add-website-form';
@@ -11,6 +12,7 @@ import { AddWebsiteForm } from './add-website-form';
 afterEach(() => {
   cleanup();
   mutate.mockReset();
+  createError = null;
 });
 
 describe('AddWebsiteForm', () => {
@@ -37,6 +39,16 @@ describe('AddWebsiteForm', () => {
         { name: 'Acme', url: 'https://acme.test' },
         expect.anything(),
       ),
+    );
+  });
+
+  it('shows the plan limit refusal when the plan has no room for another website', () => {
+    createError = { code: 'PLAN_WEBSITE_LIMIT' };
+
+    render(<AddWebsiteForm />);
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Your plan does not allow any more websites.',
     );
   });
 });

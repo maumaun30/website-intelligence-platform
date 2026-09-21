@@ -10,6 +10,7 @@ import { useCreateWebsite } from '@/lib/use-websites';
 export function AddWebsiteForm() {
   const create = useCreateWebsite();
   const [error, setError] = useState<string | null>(null);
+  const limitReached = create.error?.code === 'PLAN_WEBSITE_LIMIT';
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -45,6 +46,14 @@ export function AddWebsiteForm() {
           {error}
         </p>
       )}
+      {limitReached ? (
+        <p role="alert" className="text-sm text-destructive">
+          Your plan does not allow any more websites.{' '}
+          <a className="underline" href="/dashboard/billing">
+            See plans
+          </a>
+        </p>
+      ) : null}
       <Button type="submit" disabled={create.isPending}>
         {create.isPending ? 'Adding…' : 'Add website'}
       </Button>

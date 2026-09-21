@@ -3,11 +3,13 @@
 import type { AuditRuleId } from '@wintel/types';
 import { Button } from '@wintel/ui';
 
+import { useBilling } from '@/lib/use-billing';
 import { isActiveExplanation, useExplanation, useRequestExplanation } from '@/lib/use-explanations';
 
 const ERROR_TEXT: Record<string, string> = {
   AI_UNAVAILABLE: 'AI explanations are not enabled for this workspace.',
-  AI_DAILY_LIMIT: 'Your organization has reached today’s AI explanation limit.',
+  PLAN_AI_LIMIT: 'Your organization has used every AI explanation in its plan this month.',
+  PLAN_AI_LOCKED: 'AI explanations are not part of your plan.',
   NO_ISSUES_FOR_RULE: 'This rule has no issues to explain.',
   AUDIT_NOT_COMPLETED: 'Wait for the audit to finish before asking for an explanation.',
 };
@@ -26,6 +28,9 @@ function describeError(error: unknown): string {
 export function AiExplanation({ scanId, ruleId }: { scanId: string; ruleId: AuditRuleId }) {
   const { data: explanation, isPending, isError } = useExplanation(scanId, ruleId);
   const requestIt = useRequestExplanation(scanId, ruleId);
+  const billing = useBilling();
+  const aiLimit = billing.data?.limits.aiExplanationsPerMonth ?? null;
+  const aiUsed = billing.data?.usage.aiExplanationsThisMonth ?? 0;
 
   if (isPending) {
     return null;
@@ -45,14 +50,30 @@ export function AiExplanation({ scanId, ruleId }: { scanId: string; ruleId: Audi
       ) : null}
 
       {explanation === null ? (
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={requestIt.isPending}
-          onClick={() => requestIt.mutate({ regenerate: false })}
-        >
-          Explain with AI
-        </Button>
+        aiLimit === 0 ? (
+          <p className="text-xs text-muted-foreground">
+            AI explanations are not part of your plan.{' '}
+            <a className="underline" href="/dashboard/billing">
+              See plans
+            </a>
+          </p>
+        ) : (
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={requestIt.isPending}
+              onClick={() => requestIt.mutate({ regenerate: false })}
+            >
+              Explain with AI
+            </Button>
+            {aiLimit === null ? null : (
+              <span className="text-xs text-muted-foreground">
+                {Math.max(aiLimit - aiUsed, 0)} left this month
+              </span>
+            )}
+          </div>
+        )
       ) : active ? (
         <p className="text-xs text-muted-foreground">Generating explanation…</p>
       ) : explanation.status === 'failed' ? (
