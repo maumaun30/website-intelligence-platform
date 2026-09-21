@@ -4,7 +4,6 @@ import {
   HttpException,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { AI_DAILY_LIMIT } from '@wintel/types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ExplanationsService } from './explanations.service';
@@ -16,14 +15,16 @@ describe('ExplanationsService', () => {
   let repo: Record<string, ReturnType<typeof vi.fn>>;
   let audits: { findAuditOrThrow: ReturnType<typeof vi.fn> };
   let queue: { enqueue: ReturnType<typeof vi.fn> };
+  let billing: { assertAiQuota: ReturnType<typeof vi.fn> };
   let enabled: boolean;
 
-  const service = () =>
+  const service = (overrides: { billing?: typeof billing } = {}) =>
     new ExplanationsService(
       repo as never,
       audits as never,
       queue as never,
       { AI_EXPLANATIONS_ENABLED: enabled } as never,
+      (overrides.billing ?? billing) as never,
     );
 
   const code = async (promise: Promise<unknown>) => {
@@ -36,11 +37,11 @@ describe('ExplanationsService', () => {
     repo = {
       find: vi.fn().mockResolvedValue(null),
       countIssues: vi.fn().mockResolvedValue(3),
-      countRequestedSince: vi.fn().mockResolvedValue(0),
       queue: vi.fn().mockResolvedValue({ id: 'e1', status: 'queued' }),
     };
     audits = { findAuditOrThrow: vi.fn().mockResolvedValue({ id: 'a1', status: 'completed' }) };
     queue = { enqueue: vi.fn().mockResolvedValue(undefined) };
+    billing = { assertAiQuota: vi.fn().mockResolvedValue(undefined) };
   });
 
   it('queues and enqueues a first explanation', async () => {
@@ -92,7 +93,7 @@ describe('ExplanationsService', () => {
       await service().request('s1', member, { ruleId: 'missing-h1', regenerate: false }),
     ).toEqual({ id: 'e0', status: 'completed' });
     expect(repo.queue).not.toHaveBeenCalled();
-    expect(repo.countRequestedSince).not.toHaveBeenCalled();
+    expect(billing.assertAiQuota).not.toHaveBeenCalled();
   });
 
   it('only lets admins regenerate, and never while one is in progress', async () => {
@@ -112,18 +113,18 @@ describe('ExplanationsService', () => {
     expect(repo.queue).not.toHaveBeenCalled();
   });
 
-  it('enforces the daily cap from the start of the UTC day', async () => {
-    repo.countRequestedSince!.mockResolvedValue(AI_DAILY_LIMIT);
-    const now = new Date('2026-09-17T15:30:00.000Z');
+  it('refuses a request when the plan has no AI explanations left this month', async () => {
+    const billing = {
+      assertAiQuota: vi.fn().mockRejectedValue(
+        new ForbiddenException({
+          message: 'You have used every AI explanation in your plan this month',
+          details: { code: 'PLAN_AI_LIMIT', limit: 100, current: 100 },
+        }),
+      ),
+    };
 
-    const error = (await service()
-      .request('s1', member, { ruleId: 'missing-h1', regenerate: false }, now)
-      .catch((caught: unknown) => caught)) as HttpException;
-
-    expect(error.getStatus()).toBe(429);
-    expect(repo.countRequestedSince).toHaveBeenCalledWith(
-      'o1',
-      new Date('2026-09-17T00:00:00.000Z'),
-    );
+    await expect(
+      service({ billing }).request('s1', member, { ruleId: 'duplicate-title', regenerate: false }),
+    ).rejects.toMatchObject({ response: { details: { code: 'PLAN_AI_LIMIT' } } });
   });
 });

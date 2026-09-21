@@ -38,7 +38,12 @@ describe('ScansService', () => {
     repo = makeRepo();
     websites = { getOrThrow: vi.fn().mockResolvedValue(website) };
     queue = { enqueue: vi.fn().mockResolvedValue(undefined) };
-    service = new ScansService(repo as never, websites as never, queue as never);
+    service = new ScansService(
+      repo as never,
+      websites as never,
+      queue as never,
+      { planFor: vi.fn().mockResolvedValue('agency') } as never,
+    );
   });
 
   it('creates a queued scan and enqueues a config snapshot', async () => {
@@ -152,5 +157,35 @@ describe('ScansService', () => {
 
     expect(websites.getOrThrow).toHaveBeenCalledWith('w1', 'org1');
     expect(repo.listForWebsite).toHaveBeenCalledWith('w1', 'org1');
+  });
+
+  it('enqueues the crawl with the page cap clamped to the plan', async () => {
+    const crawlQueue = { enqueue: vi.fn() };
+    const service = new ScansService(
+      {
+        findActiveForWebsite: vi.fn().mockResolvedValue(null),
+        createQueued: vi.fn().mockResolvedValue({ id: 's1' }),
+        markFailed: vi.fn(),
+      } as never,
+      {
+        getOrThrow: vi.fn().mockResolvedValue({
+          id: 'w1',
+          verificationStatus: 'verified',
+          url: 'https://example.com',
+          domain: 'example.com',
+          maxDepth: 3,
+          maxPages: 5000,
+          includePaths: [],
+          excludePaths: [],
+          respectRobotsTxt: true,
+        }),
+      } as never,
+      crawlQueue as never,
+      { planFor: vi.fn().mockResolvedValue('free') } as never,
+    );
+
+    await service.start('w1', 'o1');
+
+    expect(crawlQueue.enqueue).toHaveBeenCalledWith(expect.objectContaining({ maxPages: 100 }));
   });
 });

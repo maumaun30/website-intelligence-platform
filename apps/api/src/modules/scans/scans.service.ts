@@ -1,6 +1,12 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { type PageListQuery, type ScanStartRefusal, evaluateScanStart } from '@wintel/types';
+import {
+  type PageListQuery,
+  type ScanStartRefusal,
+  effectivePageCap,
+  evaluateScanStart,
+} from '@wintel/types';
 
+import { BillingService } from '../billing/billing.service';
 import { WebsitesService } from '../websites/websites.service';
 import { ScansRepository } from './scans.repository';
 import { WebsiteCrawlQueueService } from './website-crawl-queue.service';
@@ -17,6 +23,7 @@ export class ScansService {
     private readonly repo: ScansRepository,
     private readonly websites: WebsitesService,
     private readonly crawlQueue: WebsiteCrawlQueueService,
+    private readonly billing: BillingService,
   ) {}
 
   async start(websiteId: string, organizationId: string, now: Date = new Date()) {
@@ -50,7 +57,7 @@ export class ScansService {
       url: website.url,
       domain: website.domain,
       maxDepth: website.maxDepth,
-      maxPages: website.maxPages,
+      maxPages: effectivePageCap(await this.billing.planFor(organizationId), website.maxPages),
       includePaths: website.includePaths,
       excludePaths: website.excludePaths,
       respectRobotsTxt: website.respectRobotsTxt,

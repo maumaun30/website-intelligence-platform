@@ -5,7 +5,6 @@ import { AUDIT_RULE_IDS } from './audit';
 export const EXPLANATION_STATUSES = ['queued', 'running', 'completed', 'failed'] as const;
 export const ACTIVE_EXPLANATION_STATUSES = ['queued', 'running'] as const;
 
-export const AI_DAILY_LIMIT = 50;
 export const EXPLANATION_PAGE_LIMIT = 10;
 export const EXPLANATION_MAX_FIXES = 10;
 export const EXPLANATION_MAX_ADVICE = 5;

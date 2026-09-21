@@ -9,6 +9,7 @@ import {
   computeNextScanAt,
 } from '@wintel/types';
 
+import { BillingService } from '../billing/billing.service';
 import { normalizeWebsiteUrl } from './normalize-url';
 import { WebsiteVerifyQueueService } from './website-verify-queue.service';
 import { WebsitesRepository } from './websites.repository';
@@ -22,6 +23,7 @@ export class WebsitesService {
   constructor(
     private readonly repo: WebsitesRepository,
     private readonly verifyQueue: WebsiteVerifyQueueService,
+    private readonly billing: BillingService,
   ) {}
 
   list(organizationId: string) {
@@ -37,6 +39,7 @@ export class WebsitesService {
   }
 
   async create(organizationId: string, createdById: string, input: CreateWebsiteInput) {
+    await this.billing.assertWebsiteQuota(organizationId);
     const { url, domain } = normalizeWebsiteUrl(input.url);
     try {
       return await this.repo.create({
@@ -67,6 +70,7 @@ export class WebsitesService {
 
     // Only a real frequency change moves the schedule; re-saving the same config must not postpone it.
     if (input.scanFrequency !== undefined) {
+      await this.billing.assertScanFrequency(organizationId, input.scanFrequency);
       const current = await this.repo.findInOrg(id, organizationId);
       if (!current) {
         throw new NotFoundException('Website not found');

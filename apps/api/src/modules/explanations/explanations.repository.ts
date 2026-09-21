@@ -18,12 +18,6 @@ export class ExplanationsRepository {
     return this.prisma.client.issue.count({ where: { auditId, ruleId } });
   }
 
-  countRequestedSince(organizationId: string, since: Date) {
-    return this.prisma.client.explanation.count({
-      where: { organizationId, requestedAt: { gte: since } },
-    });
-  }
-
   queue(data: { auditId: string; ruleId: string; organizationId: string; requestedById: string }) {
     const reset = {
       status: 'queued' as const,

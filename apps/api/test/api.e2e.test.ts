@@ -141,6 +141,14 @@ describe('scans', () => {
       .send({ name: 'Scan target', url: `https://scan-e2e-${Date.now()}.test` })
       .expect(201);
     websiteId = created.body.id;
+
+    // The free plan only allows manual scans; bump to pro so the frequency-scheduling test below
+    // can exercise daily/weekly scheduling like it did before plan quotas existed.
+    const website = await prisma.website.findUniqueOrThrow({ where: { id: websiteId } });
+    await prisma.organization.update({
+      where: { id: website.organizationId },
+      data: { plan: 'pro' },
+    });
   });
 
   afterAll(async () => {

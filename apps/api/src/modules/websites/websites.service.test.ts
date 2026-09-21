@@ -1,4 +1,4 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@wintel/database';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -48,7 +48,11 @@ describe('WebsitesService', () => {
   beforeEach(() => {
     repo = makeRepo();
     queue = makeQueue();
-    service = new WebsitesService(repo as never, queue as never);
+    service = new WebsitesService(
+      repo as never,
+      queue as never,
+      { assertWebsiteQuota: vi.fn(), assertScanFrequency: vi.fn() } as never,
+    );
   });
 
   it('normalizes and issues a token on create', async () => {
@@ -155,6 +159,45 @@ describe('WebsitesService', () => {
         service.update('w1', 'org1', { scanFrequency: 'daily' }, now),
       ).rejects.toBeInstanceOf(NotFoundException);
       expect(repo.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('WebsitesService quota enforcement', () => {
+    it('checks the website quota before creating', async () => {
+      const billing = {
+        assertWebsiteQuota: vi.fn().mockRejectedValue(new ForbiddenException()),
+        assertScanFrequency: vi.fn(),
+      };
+      const repo = { create: vi.fn() };
+      const service = new WebsitesService(
+        repo as never,
+        { enqueue: vi.fn() } as never,
+        billing as never,
+      );
+
+      await expect(
+        service.create('o1', 'u1', { name: 'Site', url: 'https://example.com' }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(repo.create).not.toHaveBeenCalled();
+    });
+
+    it('checks the frequency quota before updating the schedule', async () => {
+      const billing = {
+        assertWebsiteQuota: vi.fn(),
+        assertScanFrequency: vi.fn().mockRejectedValue(new ForbiddenException()),
+      };
+      const repo = { findInOrg: vi.fn(), update: vi.fn() };
+      const service = new WebsitesService(
+        repo as never,
+        { enqueue: vi.fn() } as never,
+        billing as never,
+      );
+
+      await expect(service.update('w1', 'o1', { scanFrequency: 'daily' })).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+      expect(repo.update).not.toHaveBeenCalled();
+      expect(billing.assertScanFrequency).toHaveBeenCalledWith('o1', 'daily');
     });
   });
 });

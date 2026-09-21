@@ -1,8 +1,6 @@
 import {
   ConflictException,
   ForbiddenException,
-  HttpException,
-  HttpStatus,
   Inject,
   Injectable,
   NotFoundException,
@@ -11,13 +9,13 @@ import {
 import type { ApiEnv } from '@wintel/config';
 import {
   ACTIVE_EXPLANATION_STATUSES,
-  AI_DAILY_LIMIT,
   type OrganizationRole,
   type RequestExplanationInput,
 } from '@wintel/types';
 
 import { API_ENV } from '../../config/api-config.module';
 import { AuditsService } from '../audits/audits.service';
+import { BillingService } from '../billing/billing.service';
 import { ExplainIssueQueueService } from './explain-issue-queue.service';
 import { ExplanationsRepository } from './explanations.repository';
 
@@ -25,10 +23,6 @@ export interface ExplanationRequester {
   organizationId: string;
   userId: string;
   role: OrganizationRole | null;
-}
-
-function startOfUtcDay(now: Date): Date {
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 }
 
 /** On-demand explanations: reads are free; generating is gated, capped, and admin-only to repeat. */
@@ -39,6 +33,7 @@ export class ExplanationsService {
     private readonly audits: AuditsService,
     private readonly queue: ExplainIssueQueueService,
     @Inject(API_ENV) private readonly env: Pick<ApiEnv, 'AI_EXPLANATIONS_ENABLED'>,
+    private readonly billing: BillingService,
   ) {}
 
   async get(scanId: string, organizationId: string, ruleId: string) {
@@ -88,13 +83,7 @@ export class ExplanationsService {
       }
     }
 
-    const used = await this.repo.countRequestedSince(requester.organizationId, startOfUtcDay(now));
-    if (used >= AI_DAILY_LIMIT) {
-      throw new HttpException(
-        { message: 'Daily AI explanation limit reached', details: { code: 'AI_DAILY_LIMIT' } },
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
-    }
+    await this.billing.assertAiQuota(requester.organizationId, now);
 
     const explanation = await this.repo.queue({
       auditId: audit.id,

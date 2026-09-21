@@ -82,13 +82,11 @@ describe('ExplanationsRepository', () => {
     expect(again.content).toBeNull();
   });
 
-  it('counts issues per rule and requests per organization since a time', async () => {
+  it('counts issues per rule', async () => {
     const { userId, organizationId, auditId } = await seed();
     await repo.queue({ auditId, ruleId: 'missing-h1', organizationId, requestedById: userId });
 
     expect(await repo.countIssues(auditId, 'missing-h1')).toBe(1);
     expect(await repo.countIssues(auditId, 'noindex')).toBe(0);
-    expect(await repo.countRequestedSince(organizationId, new Date(Date.now() - 60_000))).toBe(1);
-    expect(await repo.countRequestedSince(organizationId, new Date(Date.now() + 60_000))).toBe(0);
   });
 });
