@@ -118,7 +118,7 @@ export function startOfUtcMonth(now: Date): Date {
 export const planLimitsSchema = z.object({
   websites: z.number().int(),
   pagesPerScan: z.number().int(),
-  scanFrequencies: z.array(z.enum(SCAN_FREQUENCIES)),
+  scanFrequencies: z.array(z.enum(SCAN_FREQUENCIES)).readonly(),
   aiExplanationsPerMonth: z.number().int(),
 });
 

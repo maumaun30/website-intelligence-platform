@@ -11,6 +11,7 @@ import { RedisModule } from './infrastructure/redis/redis.module';
 import { AuditsModule } from './modules/audits/audits.module';
 import { ExplanationsModule } from './modules/explanations/explanations.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { BillingModule } from './modules/billing/billing.module';
 import { HealthModule } from './modules/health/health.module';
 import { InsightsModule } from './modules/insights/insights.module';
 import { ScansModule } from './modules/scans/scans.module';
@@ -52,6 +53,7 @@ export class AppModule {
         PrismaModule,
         RedisModule,
         AuthModule,
+        BillingModule,
         WebsitesModule,
         ScansModule,
         AuditsModule,

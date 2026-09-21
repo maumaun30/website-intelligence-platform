@@ -295,3 +295,19 @@ describe('scans', () => {
     expect(disabled.body.details).toEqual({ code: 'AI_UNAVAILABLE' });
   });
 });
+
+describe('billing', () => {
+  it('rejects an unauthenticated billing read with 401', async () => {
+    const response = await request(app.getHttpServer()).get('/api/v1/billing');
+
+    expect(response.status).toBe(401);
+  });
+
+  it('rejects an unauthenticated plan change with 401', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/billing/plan')
+      .send({ plan: 'pro' });
+
+    expect(response.status).toBe(401);
+  });
+});
