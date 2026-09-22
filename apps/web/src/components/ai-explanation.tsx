@@ -24,6 +24,18 @@ function describeError(error: unknown): string {
     : 'Could not request an explanation.';
 }
 
+/**
+ * The worker stores a refusal code (e.g. `PLAN_AI_LIMIT`) as the explanation's `error` when a
+ * quota check fails after the job was queued. Map it through the same friendly text used for a
+ * synchronous refusal; anything else is a free-text failure message and is shown as stored.
+ */
+function describeStoredError(error: string | null): string {
+  if (error && ERROR_TEXT[error]) {
+    return ERROR_TEXT[error];
+  }
+  return error ?? 'The explanation failed.';
+}
+
 /** Claude's explanation of one rule in this audit: request, progress, result, regenerate. */
 export function AiExplanation({ scanId, ruleId }: { scanId: string; ruleId: AuditRuleId }) {
   const { data: explanation, isPending, isError } = useExplanation(scanId, ruleId);
@@ -78,9 +90,7 @@ export function AiExplanation({ scanId, ruleId }: { scanId: string; ruleId: Audi
         <p className="text-xs text-muted-foreground">Generating explanation…</p>
       ) : explanation.status === 'failed' ? (
         <div className="flex flex-col gap-2">
-          <p className="text-xs text-destructive">
-            {explanation.error ?? 'The explanation failed.'}
-          </p>
+          <p className="text-xs text-destructive">{describeStoredError(explanation.error)}</p>
           <Button
             variant="outline"
             size="sm"

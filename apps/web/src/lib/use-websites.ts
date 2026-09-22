@@ -38,8 +38,8 @@ export function useCreateWebsite() {
 export function useUpdateWebsite(id: string) {
   const client = useQueryClient();
 
-  return useMutation({
-    mutationFn: (input: UpdateWebsiteInput) => updateWebsite(id, input),
+  return useMutation<Website, WebsiteRequestError, UpdateWebsiteInput>({
+    mutationFn: (input) => updateWebsite(id, input),
     onSuccess: () => client.invalidateQueries({ queryKey: ['websites', id] }),
   });
 }

@@ -68,14 +68,16 @@ export class WebsitesService {
   ) {
     const data: Prisma.WebsiteUpdateInput = { ...input };
 
-    // Only a real frequency change moves the schedule; re-saving the same config must not postpone it.
+    // Only a real frequency change moves the schedule — and only a real change is checked against
+    // the plan, so a grandfathered website whose stored frequency is no longer allowed can still be
+    // saved unchanged (e.g. from the settings form) without tripping the quota gate.
     if (input.scanFrequency !== undefined) {
-      await this.billing.assertScanFrequency(organizationId, input.scanFrequency);
       const current = await this.repo.findInOrg(id, organizationId);
       if (!current) {
         throw new NotFoundException('Website not found');
       }
       if (current.scanFrequency !== input.scanFrequency) {
+        await this.billing.assertScanFrequency(organizationId, input.scanFrequency);
         data.nextScanAt = computeNextScanAt(input.scanFrequency, now);
       }
     }

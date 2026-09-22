@@ -138,6 +138,22 @@ describe('AiExplanation', () => {
     );
   });
 
+  it('maps a stored worker refusal code to friendly text, not the raw code', () => {
+    stubBillingFetch();
+    explanation = make({
+      status: 'failed',
+      content: null,
+      error: 'PLAN_AI_LIMIT',
+    });
+
+    renderWithQueryClient(<AiExplanation scanId="s1" ruleId="missing-h1" />);
+
+    expect(
+      screen.getByText('Your organization has used every AI explanation in its plan this month.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('PLAN_AI_LIMIT')).not.toBeInTheDocument();
+  });
+
   it('locks the panel when the plan has no AI explanations', async () => {
     vi.stubGlobal(
       'fetch',

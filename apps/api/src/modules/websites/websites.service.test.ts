@@ -186,7 +186,10 @@ describe('WebsitesService', () => {
         assertWebsiteQuota: vi.fn(),
         assertScanFrequency: vi.fn().mockRejectedValue(new ForbiddenException()),
       };
-      const repo = { findInOrg: vi.fn(), update: vi.fn() };
+      const repo = {
+        findInOrg: vi.fn().mockResolvedValue({ ...sampleRow, scanFrequency: 'manual' }),
+        update: vi.fn(),
+      };
       const service = new WebsitesService(
         repo as never,
         { enqueue: vi.fn() } as never,
@@ -198,6 +201,32 @@ describe('WebsitesService', () => {
       );
       expect(repo.update).not.toHaveBeenCalled();
       expect(billing.assertScanFrequency).toHaveBeenCalledWith('o1', 'daily');
+    });
+
+    it('re-saving an unchanged disallowed frequency succeeds without checking the quota', async () => {
+      const billing = {
+        assertWebsiteQuota: vi.fn(),
+        assertScanFrequency: vi.fn().mockRejectedValue(new ForbiddenException()),
+      };
+      const repo = {
+        // A grandfathered website: 'daily' is no longer allowed on the org's current plan, but
+        // it is already the stored value.
+        findInOrg: vi.fn().mockResolvedValue({ ...sampleRow, scanFrequency: 'daily' }),
+        update: vi.fn().mockResolvedValue(sampleRow),
+      };
+      const service = new WebsitesService(
+        repo as never,
+        { enqueue: vi.fn() } as never,
+        billing as never,
+      );
+
+      await service.update('w1', 'o1', { scanFrequency: 'daily', maxDepth: 4 });
+
+      expect(billing.assertScanFrequency).not.toHaveBeenCalled();
+      expect(repo.update).toHaveBeenCalledWith('w1', 'o1', {
+        scanFrequency: 'daily',
+        maxDepth: 4,
+      });
     });
   });
 });

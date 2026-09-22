@@ -8,6 +8,17 @@ import { describeNextScan } from '@/lib/schedule-text';
 import { useBilling } from '@/lib/use-billing';
 import { useUpdateWebsite } from '@/lib/use-websites';
 
+const UPDATE_ERROR_TEXT: Record<string, string> = {
+  PLAN_SCAN_FREQUENCY: 'That schedule is not part of your plan.',
+};
+
+function describeUpdateError(code: string | null): string {
+  if (code && UPDATE_ERROR_TEXT[code]) {
+    return UPDATE_ERROR_TEXT[code];
+  }
+  return 'Could not save the scan config.';
+}
+
 function toLines(values: string[]): string {
   return values.join('\n');
 }
@@ -88,7 +99,12 @@ export function ScanConfigForm({ website }: { website: Website }) {
             <option
               key={frequency}
               value={frequency}
-              disabled={!allowedFrequencies.includes(frequency)}
+              // Never disable the website's own current value: a grandfathered website whose
+              // frequency the plan no longer allows must stay selectable, or the browser drops it
+              // from the submitted FormData and the save fails with a misleading parse error.
+              disabled={
+                !allowedFrequencies.includes(frequency) && frequency !== website.scanFrequency
+              }
             >
               {frequency}
             </option>
@@ -115,6 +131,19 @@ export function ScanConfigForm({ website }: { website: Website }) {
           {error}
         </p>
       )}
+      {update.error ? (
+        <p role="alert" className="text-sm text-destructive">
+          {describeUpdateError(update.error.code)}
+          {update.error.code === 'PLAN_SCAN_FREQUENCY' ? (
+            <>
+              {' '}
+              <a className="underline" href="/dashboard/billing">
+                See plans
+              </a>
+            </>
+          ) : null}
+        </p>
+      ) : null}
       <Button type="submit" disabled={update.isPending}>
         {update.isPending ? 'Saving…' : 'Save scan config'}
       </Button>
