@@ -54,3 +54,37 @@ describe('BillingRepository AI usage counter', () => {
     expect(await repo.aiUsage(organizationId, '2026-09')).toBe(5);
   });
 });
+
+describe('BillingRepository applyPlanChange', () => {
+  it('leaves a website belonging to a different organization untouched', async () => {
+    const organizationId = await seedOrganization();
+    const otherOrganizationId = await seedOrganization();
+    const userId = randomUUID();
+    await prisma.user.create({
+      data: { id: userId, name: 'U', email: `${userId}@example.com`, emailVerified: true },
+    });
+    const foreignWebsite = await prisma.website.create({
+      data: {
+        organizationId: otherOrganizationId,
+        createdById: userId,
+        name: 'Foreign',
+        url: 'https://foreign.test',
+        domain: `foreign-${randomUUID().slice(0, 8)}.test`,
+        verificationToken: 't',
+        scanFrequency: 'daily',
+        nextScanAt: new Date('2026-09-18T00:00:00.000Z'),
+      },
+    });
+
+    // Passing the foreign website's id as if it were one of `organizationId`'s downgrades: the
+    // transaction's `WHERE organizationId` guard must refuse to touch it.
+    await repo.applyPlanChange(organizationId, 'free', [foreignWebsite.id]);
+
+    const reread = await prisma.website.findUniqueOrThrow({ where: { id: foreignWebsite.id } });
+    expect(reread.scanFrequency).toBe('daily');
+    expect(reread.nextScanAt).toEqual(foreignWebsite.nextScanAt);
+    expect(
+      (await prisma.organization.findUniqueOrThrow({ where: { id: organizationId } })).plan,
+    ).toBe('free');
+  });
+});
