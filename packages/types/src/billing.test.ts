@@ -117,7 +117,6 @@ describe('PLAN_LIMITS', () => {
     expect(Object.isFrozen(PLAN_LIMITS.free.scanFrequencies)).toBe(true);
 
     expect(() => {
-      // @ts-expect-error mutation is exactly what must fail at runtime
       PLAN_LIMITS.free.websites = 99;
     }).toThrow();
   });
