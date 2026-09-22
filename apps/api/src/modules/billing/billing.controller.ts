@@ -1,4 +1,12 @@
-import { Body, Controller, ForbiddenException, Get, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  ForbiddenException,
+  Get,
+  HttpCode,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { type ChangePlanInput, type Principal, changePlanInputSchema } from '@wintel/types';
 
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
@@ -26,7 +34,9 @@ export class BillingController {
     return this.billing.state(this.orgId(principal));
   }
 
+  /** A plan switch creates nothing, so it answers 200 rather than Nest's POST default of 201. */
   @Post('plan')
+  @HttpCode(200)
   @Roles('owner')
   changePlan(
     @CurrentUser() principal: Principal,
