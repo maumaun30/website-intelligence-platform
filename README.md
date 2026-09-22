@@ -21,6 +21,23 @@ its score trend. Optionally, Claude explains a rule's findings for the affected 
 with concrete fixes (set `AI_EXPLANATIONS_ENABLED=true` for the API and `ANTHROPIC_API_KEY` for the
 worker).
 
+## Plans and quotas
+
+Every organization is on one of three plans, `free` by default:
+
+| Plan   | Websites | Pages per scan | Scan frequencies      | AI explanations / month |
+| ------ | -------- | -------------- | --------------------- | ----------------------- |
+| free   | 1        | 100            | manual                | 0                       |
+| pro    | 10       | 1000           | manual, daily, weekly | 100                     |
+| agency | 50       | 10000          | manual, daily, weekly | 500                     |
+
+`GET /api/v1/billing` returns the current plan, its limits, and usage; `POST /api/v1/billing/plan`
+(owner only) switches plans directly — there is no payment step yet, and no Stripe integration
+(planned for slice 9). Switching to a plan with a lower website limit does not delete or lock any
+existing website: all of them are grandfathered. If a website's schedule (`daily`/`weekly`) is no
+longer allowed on the new plan, it is reset to `manual` with its next scheduled run cleared, and
+the affected websites are reported back in the response.
+
 ## Requirements
 
 - Node 22 LTS (`nvm use`)
