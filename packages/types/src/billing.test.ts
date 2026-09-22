@@ -110,6 +110,19 @@ describe('evaluatePlanChange', () => {
   });
 });
 
+describe('PLAN_LIMITS', () => {
+  it('is frozen at every level: the table, each plan, and each plan’s scanFrequencies', () => {
+    expect(Object.isFrozen(PLAN_LIMITS)).toBe(true);
+    expect(Object.isFrozen(PLAN_LIMITS.free)).toBe(true);
+    expect(Object.isFrozen(PLAN_LIMITS.free.scanFrequencies)).toBe(true);
+
+    expect(() => {
+      // @ts-expect-error mutation is exactly what must fail at runtime
+      PLAN_LIMITS.free.websites = 99;
+    }).toThrow();
+  });
+});
+
 describe('startOfUtcMonth', () => {
   it('returns midnight UTC on the first of the month', () => {
     expect(startOfUtcMonth(new Date('2026-09-21T13:45:12.000Z')).toISOString()).toBe(

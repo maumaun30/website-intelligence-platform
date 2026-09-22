@@ -217,6 +217,32 @@ describe('ScanSchedulerProcessor', () => {
     expect(reread).toMatchObject({ scanFrequency: 'manual', nextScanAt: null });
   });
 
+  it('honors a plan downgrade committed after the claim, not the findDue snapshot', async () => {
+    const website = await seedWebsite({ plan: 'pro', scanFrequency: 'daily' });
+    class RacingProcessor extends ScanSchedulerProcessor {
+      override async findDue(now: Date) {
+        const rows = await super.findDue(now);
+        // Simulates the organization downgrading in the window between selection and the claim.
+        await prisma.organization.update({
+          where: { id: website.organizationId },
+          data: { plan: 'free' },
+        });
+        return rows;
+      }
+    }
+
+    const summary = await new RacingProcessor(
+      { client: prisma } as never,
+      crawlQueue as never,
+      logger as never,
+    ).runTick(NOW);
+
+    expect(summary).toMatchObject({ due: 1, started: 0, skipped: 1 });
+    expect(crawlJobsFor(website.id)).toEqual([]);
+    const reread = await prisma.website.findUniqueOrThrow({ where: { id: website.id } });
+    expect(reread).toMatchObject({ scanFrequency: 'manual', nextScanAt: null });
+  });
+
   it('clamps the enqueued page cap to the organization plan', async () => {
     const website = await seedWebsite({ plan: 'pro', maxPages: 5000 });
 

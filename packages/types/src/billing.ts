@@ -16,26 +16,34 @@ export interface PlanLimits {
  * What each plan allows. Enforced by the API at the create/start boundary and re-checked by the
  * worker, so both read this one table. Changing a number here changes both.
  */
-export const PLAN_LIMITS: Record<OrganizationPlan, PlanLimits> = {
-  free: {
+// `as const satisfies Record<...>` would narrow each plan's `scanFrequencies` to its own literal
+// tuple type, which then breaks `.includes(query.scanFrequency)` below (the union of tuple types
+// has no single call signature accepting the full `ScanFrequency` union). Object.freeze gives the
+// same "cannot be mutated" guarantee without narrowing the type away from `PlanLimits`.
+function frozenLimits(limits: PlanLimits): PlanLimits {
+  return Object.freeze({ ...limits, scanFrequencies: Object.freeze([...limits.scanFrequencies]) });
+}
+
+export const PLAN_LIMITS: Record<OrganizationPlan, PlanLimits> = Object.freeze({
+  free: frozenLimits({
     websites: 1,
     pagesPerScan: 100,
     scanFrequencies: ['manual'],
     aiExplanationsPerMonth: 0,
-  },
-  pro: {
+  }),
+  pro: frozenLimits({
     websites: 10,
     pagesPerScan: 1000,
     scanFrequencies: ['manual', 'daily', 'weekly'],
     aiExplanationsPerMonth: 100,
-  },
-  agency: {
+  }),
+  agency: frozenLimits({
     websites: 50,
     pagesPerScan: 10000,
     scanFrequencies: ['manual', 'daily', 'weekly'],
     aiExplanationsPerMonth: 500,
-  },
-};
+  }),
+});
 
 /** Countable refusals carry the numbers the UI shows; the other two are about the plan itself. */
 export type QuotaDecision =

@@ -34,6 +34,10 @@ export function useRequestExplanation(scanId: string, ruleId: AuditRuleId) {
   return useMutation({
     mutationFn: ({ regenerate }: { regenerate: boolean }) =>
       requestExplanation(scanId, { ruleId, regenerate }),
-    onSuccess: (explanation) => client.setQueryData(explanationKey(scanId, ruleId), explanation),
+    onSuccess: (explanation) => {
+      client.setQueryData(explanationKey(scanId, ruleId), explanation);
+      // A request consumes this month's AI quota, so "N left this month" must not go stale.
+      void client.invalidateQueries({ queryKey: ['billing'] });
+    },
   });
 }

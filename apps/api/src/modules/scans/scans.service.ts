@@ -49,6 +49,8 @@ export class ScansService {
       );
     }
 
+    // Read before creating the scan: a failed plan read must not leave an orphaned queued scan.
+    const plan = await this.billing.planFor(organizationId);
     const scan = await this.repo.createQueued({ websiteId, organizationId });
     await this.crawlQueue.enqueue({
       scanId: scan.id,
@@ -57,7 +59,7 @@ export class ScansService {
       url: website.url,
       domain: website.domain,
       maxDepth: website.maxDepth,
-      maxPages: effectivePageCap(await this.billing.planFor(organizationId), website.maxPages),
+      maxPages: effectivePageCap(plan, website.maxPages),
       includePaths: website.includePaths,
       excludePaths: website.excludePaths,
       respectRobotsTxt: website.respectRobotsTxt,

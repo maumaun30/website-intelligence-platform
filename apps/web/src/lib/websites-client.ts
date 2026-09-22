@@ -5,11 +5,13 @@ import {
   type Website,
   websiteSchema,
 } from '@wintel/types';
+import { z } from 'zod';
 
 import { ApiError } from './api-client';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 const websiteListSchema = websiteSchema.array();
+const errorBodySchema = z.object({ details: z.object({ code: z.string() }).optional() });
 
 /** An API error that also carries the server's machine-readable `details.code`. */
 export class WebsiteRequestError extends ApiError {
@@ -31,10 +33,11 @@ async function request(path: string, init?: RequestInit): Promise<Response> {
   });
 
   if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as {
-      details?: { code?: string };
-    } | null;
-    throw new WebsiteRequestError(response.status, body?.details?.code ?? null);
+    const parsed = errorBodySchema.safeParse(await response.json().catch(() => null));
+    throw new WebsiteRequestError(
+      response.status,
+      parsed.success ? (parsed.data.details?.code ?? null) : null,
+    );
   }
 
   return response;

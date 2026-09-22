@@ -41,7 +41,9 @@ export default function BillingPage() {
 
       {changePlan.isError ? (
         <p className="text-sm text-destructive">
-          Could not change the plan. Only an owner can do this.
+          {changePlan.error.status === 403
+            ? 'Only an owner can change the plan.'
+            : 'Could not change the plan. Try again.'}
         </p>
       ) : null}
 

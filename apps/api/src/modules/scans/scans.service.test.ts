@@ -128,6 +128,19 @@ describe('ScansService', () => {
     expect(repo.createQueued).toHaveBeenCalled();
   });
 
+  it('reads the plan before creating a queued scan, so a failed read leaves nothing queued', async () => {
+    const billing = { planFor: vi.fn().mockRejectedValue(new Error('db down')) };
+    const service = new ScansService(
+      repo as never,
+      websites as never,
+      queue as never,
+      billing as never,
+    );
+
+    await expect(service.start('w1', 'org1')).rejects.toThrow('db down');
+    expect(repo.createQueued).not.toHaveBeenCalled();
+  });
+
   it('lists pages with the pagination echoed back', async () => {
     repo.listPages.mockResolvedValue({ items: [{ id: 'p1' }], total: 1 });
 

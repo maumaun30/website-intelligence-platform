@@ -1,8 +1,9 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { OrganizationPlan } from '@wintel/types';
+import type { OrganizationPlan, PlanChangeResult } from '@wintel/types';
 
+import type { ApiError } from './api-client';
 import { changePlan, getBilling } from './billing-client';
 
 export function useBilling() {
@@ -13,8 +14,8 @@ export function useBilling() {
 export function useChangePlan() {
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: (plan: OrganizationPlan) => changePlan(plan),
+  return useMutation<PlanChangeResult, ApiError, OrganizationPlan>({
+    mutationFn: (plan) => changePlan(plan),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['billing'] }),
