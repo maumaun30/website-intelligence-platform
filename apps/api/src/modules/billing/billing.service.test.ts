@@ -6,7 +6,8 @@ import { BillingService } from './billing.service';
 const repo = (overrides: Partial<Record<string, unknown>> = {}) => ({
   plan: vi.fn().mockResolvedValue('pro'),
   countWebsites: vi.fn().mockResolvedValue(0),
-  countExplanationsSince: vi.fn().mockResolvedValue(0),
+  aiUsage: vi.fn().mockResolvedValue(0),
+  incrementAiUsageBelow: vi.fn().mockResolvedValue(true),
   listWebsiteFrequencies: vi.fn().mockResolvedValue([]),
   applyPlanChange: vi.fn().mockResolvedValue(undefined),
   ...overrides,
@@ -16,7 +17,7 @@ describe('BillingService.state', () => {
   it('reports the plan, its limits, and current usage', async () => {
     const dependencies = repo({
       countWebsites: vi.fn().mockResolvedValue(3),
-      countExplanationsSince: vi.fn().mockResolvedValue(7),
+      aiUsage: vi.fn().mockResolvedValue(7),
     });
     const service = new BillingService(dependencies as never);
 
@@ -25,10 +26,7 @@ describe('BillingService.state', () => {
     expect(state.plan).toBe('pro');
     expect(state.limits.websites).toBe(10);
     expect(state.usage).toEqual({ websites: 3, aiExplanationsThisMonth: 7 });
-    expect(dependencies.countExplanationsSince).toHaveBeenCalledWith(
-      'o1',
-      new Date('2026-09-01T00:00:00.000Z'),
-    );
+    expect(dependencies.aiUsage).toHaveBeenCalledWith('o1', '2026-09');
   });
 });
 
@@ -94,17 +92,38 @@ describe('BillingService quota assertions', () => {
     await expect(service.assertScanFrequency('o1', 'manual')).resolves.toBeUndefined();
   });
 
-  it('distinguishes a locked AI plan from an exhausted one', async () => {
-    const locked = new BillingService(repo({ plan: vi.fn().mockResolvedValue('free') }) as never);
-    await expect(locked.assertAiQuota('o1')).rejects.toMatchObject({
+  it('refuses a locked AI plan without touching the counter', async () => {
+    const dependencies = repo({ plan: vi.fn().mockResolvedValue('free') });
+    const service = new BillingService(dependencies as never);
+
+    await expect(service.consumeAiQuota('o1')).rejects.toMatchObject({
       response: { details: { code: 'PLAN_AI_LOCKED' } },
     });
+    expect(dependencies.incrementAiUsageBelow).not.toHaveBeenCalled();
+  });
 
-    const exhausted = new BillingService(
-      repo({ countExplanationsSince: vi.fn().mockResolvedValue(100) }) as never,
-    );
-    await expect(exhausted.assertAiQuota('o1')).rejects.toMatchObject({
+  it('consumes one unit of the current month when under the limit', async () => {
+    const dependencies = repo();
+    const service = new BillingService(dependencies as never);
+
+    await expect(
+      service.consumeAiQuota('o1', new Date('2026-09-21T10:00:00.000Z')),
+    ).resolves.toBeUndefined();
+    expect(dependencies.incrementAiUsageBelow).toHaveBeenCalledWith('o1', '2026-09', 100);
+  });
+
+  it('refuses at the limit with the numbers read after the refusal', async () => {
+    const dependencies = repo({
+      incrementAiUsageBelow: vi.fn().mockResolvedValue(false),
+      aiUsage: vi.fn().mockResolvedValue(100),
+    });
+    const service = new BillingService(dependencies as never);
+
+    await expect(
+      service.consumeAiQuota('o1', new Date('2026-09-21T10:00:00.000Z')),
+    ).rejects.toMatchObject({
       response: { details: { code: 'PLAN_AI_LIMIT', limit: 100, current: 100 } },
     });
+    expect(dependencies.aiUsage).toHaveBeenCalledWith('o1', '2026-09');
   });
 });

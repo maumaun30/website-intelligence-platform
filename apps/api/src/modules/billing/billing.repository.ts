@@ -23,10 +23,35 @@ export class BillingRepository {
     return this.prisma.client.website.count({ where: { organizationId } });
   }
 
-  countExplanationsSince(organizationId: string, since: Date): Promise<number> {
-    return this.prisma.client.explanation.count({
-      where: { organizationId, requestedAt: { gte: since } },
+  /** AI explanations the organization has requested in the given "YYYY-MM" month (0 if none). */
+  async aiUsage(organizationId: string, month: string): Promise<number> {
+    const usage = await this.prisma.client.organizationUsage.findUnique({
+      where: { organizationId_month: { organizationId, month } },
+      select: { aiExplanations: true },
     });
+    return usage?.aiExplanations ?? 0;
+  }
+
+  /**
+   * Counts one AI explanation against the month, but only while the month is below `limit`.
+   * One statement, so concurrent requests cannot both take the last unit: the conflicting upsert
+   * waits on the row lock and then re-evaluates the WHERE against the committed count.
+   * Returns whether the unit was taken.
+   */
+  async incrementAiUsageBelow(
+    organizationId: string,
+    month: string,
+    limit: number,
+  ): Promise<boolean> {
+    const rows = await this.prisma.client.$queryRaw<{ aiExplanations: number }[]>`
+      INSERT INTO organization_usage ("organizationId", month, "aiExplanations", "updatedAt")
+      VALUES (${organizationId}, ${month}, 1, now())
+      ON CONFLICT ("organizationId", month)
+      DO UPDATE SET "aiExplanations" = organization_usage."aiExplanations" + 1, "updatedAt" = now()
+      WHERE organization_usage."aiExplanations" < ${limit}
+      RETURNING "aiExplanations"
+    `;
+    return rows.length > 0;
   }
 
   listWebsiteFrequencies(

@@ -15,7 +15,7 @@ describe('ExplanationsService', () => {
   let repo: Record<string, ReturnType<typeof vi.fn>>;
   let audits: { findAuditOrThrow: ReturnType<typeof vi.fn> };
   let queue: { enqueue: ReturnType<typeof vi.fn> };
-  let billing: { assertAiQuota: ReturnType<typeof vi.fn> };
+  let billing: { consumeAiQuota: ReturnType<typeof vi.fn> };
   let enabled: boolean;
 
   const service = (overrides: { billing?: typeof billing } = {}) =>
@@ -41,7 +41,7 @@ describe('ExplanationsService', () => {
     };
     audits = { findAuditOrThrow: vi.fn().mockResolvedValue({ id: 'a1', status: 'completed' }) };
     queue = { enqueue: vi.fn().mockResolvedValue(undefined) };
-    billing = { assertAiQuota: vi.fn().mockResolvedValue(undefined) };
+    billing = { consumeAiQuota: vi.fn().mockResolvedValue(undefined) };
   });
 
   it('queues and enqueues a first explanation', async () => {
@@ -93,7 +93,7 @@ describe('ExplanationsService', () => {
       await service().request('s1', member, { ruleId: 'missing-h1', regenerate: false }),
     ).toEqual({ id: 'e0', status: 'completed' });
     expect(repo.queue).not.toHaveBeenCalled();
-    expect(billing.assertAiQuota).not.toHaveBeenCalled();
+    expect(billing.consumeAiQuota).not.toHaveBeenCalled();
   });
 
   it('only lets admins regenerate, and never while one is in progress', async () => {
@@ -115,7 +115,7 @@ describe('ExplanationsService', () => {
 
   it('refuses a request when the plan has no AI explanations left this month', async () => {
     const billing = {
-      assertAiQuota: vi.fn().mockRejectedValue(
+      consumeAiQuota: vi.fn().mockRejectedValue(
         new ForbiddenException({
           message: 'You have used every AI explanation in your plan this month',
           details: { code: 'PLAN_AI_LIMIT', limit: 100, current: 100 },

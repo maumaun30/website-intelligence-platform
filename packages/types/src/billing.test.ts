@@ -6,6 +6,7 @@ import {
   evaluatePlanChange,
   evaluateQuota,
   startOfUtcMonth,
+  utcMonthKey,
 } from './billing';
 
 describe('evaluateQuota: websites', () => {
@@ -114,5 +115,16 @@ describe('startOfUtcMonth', () => {
     expect(startOfUtcMonth(new Date('2026-09-21T13:45:12.000Z')).toISOString()).toBe(
       '2026-09-01T00:00:00.000Z',
     );
+  });
+});
+
+describe('utcMonthKey', () => {
+  it('formats the UTC month as YYYY-MM with a zero-padded month', () => {
+    expect(utcMonthKey(new Date('2026-03-15T12:00:00.000Z'))).toBe('2026-03');
+  });
+
+  it('uses the UTC month, not the local one, at a month boundary', () => {
+    expect(utcMonthKey(new Date('2026-09-30T23:59:59.999Z'))).toBe('2026-09');
+    expect(utcMonthKey(new Date('2026-10-01T00:00:00.000Z'))).toBe('2026-10');
   });
 });

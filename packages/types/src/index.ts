@@ -133,6 +133,7 @@ export {
   planChangeResultSchema,
   planLimitsSchema,
   startOfUtcMonth,
+  utcMonthKey,
 } from './billing';
 export type {
   BillingState,

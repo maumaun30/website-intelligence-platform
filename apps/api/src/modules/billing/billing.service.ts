@@ -7,7 +7,7 @@ import {
   type ScanFrequency,
   evaluatePlanChange,
   evaluateQuota,
-  startOfUtcMonth,
+  utcMonthKey,
 } from '@wintel/types';
 
 import { BillingRepository } from './billing.repository';
@@ -35,7 +35,7 @@ export class BillingService {
     const [plan, websites, aiExplanationsThisMonth] = await Promise.all([
       this.repo.plan(organizationId),
       this.repo.countWebsites(organizationId),
-      this.repo.countExplanationsSince(organizationId, startOfUtcMonth(now)),
+      this.repo.aiUsage(organizationId, utcMonthKey(now)),
     ]);
 
     return {
@@ -77,18 +77,33 @@ export class BillingService {
     this.enforce(evaluateQuota({ plan, kind: 'scanFrequency', scanFrequency }));
   }
 
-  async assertAiQuota(organizationId: string, now: Date = new Date()): Promise<void> {
-    const [plan, current] = await Promise.all([
-      this.repo.plan(organizationId),
-      this.repo.countExplanationsSince(organizationId, startOfUtcMonth(now)),
-    ]);
-    this.enforce(evaluateQuota({ plan, kind: 'aiExplanations', current }));
+  /**
+   * Takes one AI explanation from this month's allowance, or refuses. Call it only when a
+   * generation will actually be queued: every call that returns is one Claude call's worth of
+   * spend, regenerations included.
+   */
+  async consumeAiQuota(organizationId: string, now: Date = new Date()): Promise<void> {
+    const plan = await this.repo.plan(organizationId);
+    const limit = PLAN_LIMITS[plan].aiExplanationsPerMonth;
+    if (limit === 0) {
+      this.refuse({ allowed: false, code: 'PLAN_AI_LOCKED' });
+    }
+
+    const month = utcMonthKey(now);
+    if (await this.repo.incrementAiUsageBelow(organizationId, month, limit)) {
+      return;
+    }
+    const current = await this.repo.aiUsage(organizationId, month);
+    this.refuse({ allowed: false, code: 'PLAN_AI_LIMIT', limit, current });
   }
 
   private enforce(decision: QuotaDecision): void {
-    if (decision.allowed) {
-      return;
+    if (!decision.allowed) {
+      this.refuse(decision);
     }
+  }
+
+  private refuse(decision: Exclude<QuotaDecision, { allowed: true }>): never {
     const details =
       'limit' in decision
         ? { code: decision.code, limit: decision.limit, current: decision.current }

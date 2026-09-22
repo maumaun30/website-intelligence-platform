@@ -115,6 +115,15 @@ export function startOfUtcMonth(now: Date): Date {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
 }
 
+/**
+ * The key of the AI usage counter row for the UTC calendar month containing `now`, as "YYYY-MM".
+ * The API increments that row once per requested explanation and the worker reads it back.
+ */
+export function utcMonthKey(now: Date): string {
+  const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+  return `${now.getUTCFullYear()}-${month}`;
+}
+
 export const planLimitsSchema = z.object({
   websites: z.number().int(),
   pagesPerScan: z.number().int(),

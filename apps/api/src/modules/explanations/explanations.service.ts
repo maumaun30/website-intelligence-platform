@@ -83,7 +83,7 @@ export class ExplanationsService {
       }
     }
 
-    await this.billing.assertAiQuota(requester.organizationId, now);
+    await this.billing.consumeAiQuota(requester.organizationId, now);
 
     const explanation = await this.repo.queue({
       auditId: audit.id,

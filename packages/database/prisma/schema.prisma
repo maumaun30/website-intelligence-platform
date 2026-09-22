@@ -386,3 +386,15 @@ model Explanation {
   @@index([organizationId, requestedAt])
   @@map("explanation")
 }
+
+/// AI explanations requested per organization per UTC calendar month. Incremented once per
+/// request (including regenerations), so it bounds spend where counting explanation rows cannot.
+model OrganizationUsage {
+  organizationId String
+  month          String   // "YYYY-MM", UTC
+  aiExplanations Int      @default(0)
+  updatedAt      DateTime @updatedAt
+
+  @@id([organizationId, month])
+  @@map("organization_usage")
+}

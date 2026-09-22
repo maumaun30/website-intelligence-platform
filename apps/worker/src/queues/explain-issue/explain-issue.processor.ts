@@ -5,7 +5,7 @@ import {
   EXPLAIN_ISSUE_QUEUE,
   evaluateQuota,
   explainIssueJobSchema,
-  startOfUtcMonth,
+  utcMonthKey,
 } from '@wintel/types';
 import { type Job, UnrecoverableError } from 'bullmq';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
@@ -61,21 +61,29 @@ export class ExplainIssueProcessor extends WorkerHost {
 
     const explanation = await explanations.findUniqueOrThrow({ where: { id: explanationId } });
 
-    // The API checked the quota when the job was queued; a downgrade since then must not spend.
-    const organization = await this.prisma.client.organization.findUnique({
-      where: { id: explanation.organizationId },
-      select: { plan: true },
-    });
+    // The API took this job's unit from the month's counter when it queued the job, so the job may
+    // run while the counter is at most the limit; above it means a downgrade since then, and a job
+    // queued before a downgrade must not spend. Evaluating the count *before* this job reuses the
+    // shared rule verbatim, including PLAN_AI_LOCKED for a plan with no AI at all.
+    const [organization, usage] = await Promise.all([
+      this.prisma.client.organization.findUnique({
+        where: { id: explanation.organizationId },
+        select: { plan: true },
+      }),
+      this.prisma.client.organizationUsage.findUnique({
+        where: {
+          organizationId_month: {
+            organizationId: explanation.organizationId,
+            month: utcMonthKey(new Date()),
+          },
+        },
+        select: { aiExplanations: true },
+      }),
+    ]);
     const decision = evaluateQuota({
       plan: organization?.plan ?? 'free',
       kind: 'aiExplanations',
-      current: await this.prisma.client.explanation.count({
-        where: {
-          organizationId: explanation.organizationId,
-          requestedAt: { gte: startOfUtcMonth(new Date()) },
-          status: 'completed',
-        },
-      }),
+      current: (usage?.aiExplanations ?? 0) - 1,
     });
     if (!decision.allowed) {
       await explanations.update({
