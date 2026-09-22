@@ -1,5 +1,6 @@
 'use client';
 
+import { Button } from '@wintel/ui';
 import {
   ORGANIZATION_PLANS,
   type OrganizationPlan,
@@ -7,6 +8,7 @@ import {
   type ScanFrequency,
   evaluatePlanChange,
 } from '@wintel/types';
+import { useEffect, useId, useRef, useState } from 'react';
 
 import { UsageBar } from './usage-bar';
 
@@ -33,7 +35,75 @@ function describe(limits: PlanLimits): string[] {
   ];
 }
 
-/** The plan catalog with the current plan marked, plus what a downgrade would reset. */
+/**
+ * The confirm step every switch goes through. A downgrade resets schedules and the previous
+ * frequencies are not kept, so the step names each website that will lose its schedule.
+ */
+function ConfirmSwitch({
+  plan,
+  losing,
+  pending,
+  onConfirm,
+  onCancel,
+}: {
+  plan: OrganizationPlan;
+  losing: WebsiteSummary[];
+  pending: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const titleId = useId();
+  const descriptionId = useId();
+  const region = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    region.current?.focus();
+  }, []);
+
+  return (
+    <div
+      ref={region}
+      role="alertdialog"
+      aria-labelledby={titleId}
+      aria-describedby={descriptionId}
+      tabIndex={-1}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          onCancel();
+        }
+      }}
+      className="flex flex-col gap-3 rounded-md border border-border bg-muted/40 p-3 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      <p id={titleId} className="text-sm font-medium">
+        Switch to {PLAN_NAMES[plan]}?
+      </p>
+      <div id={descriptionId} className="flex flex-col gap-1 text-xs text-muted-foreground">
+        {losing.length > 0 ? (
+          <>
+            <p>These websites go back to manual scanning, and their schedules are not kept:</p>
+            <ul className="list-disc pl-4">
+              {losing.map((site) => (
+                <li key={site.id}>{site.name}</li>
+              ))}
+            </ul>
+          </>
+        ) : (
+          <p>No scheduled scans change.</p>
+        )}
+      </div>
+      <div className="flex gap-2">
+        <Button type="button" size="sm" disabled={pending} onClick={onConfirm}>
+          Confirm switch
+        </Button>
+        <Button type="button" size="sm" variant="ghost" disabled={pending} onClick={onCancel}>
+          Cancel
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/** The plan catalog with the current plan marked; switching asks to confirm what it resets. */
 export function PlanCards({
   current,
   plans,
@@ -49,6 +119,8 @@ export function PlanCards({
   onSelect: (plan: OrganizationPlan) => void;
   pending: boolean;
 }) {
+  const [confirming, setConfirming] = useState<OrganizationPlan | null>(null);
+
   return (
     <div className="grid gap-4 md:grid-cols-3">
       {ORGANIZATION_PLANS.map((plan) => {
@@ -88,19 +160,27 @@ export function PlanCards({
               </div>
             ) : (
               <div className="flex flex-col gap-2">
-                {losing.length > 0 ? (
-                  <p className="text-xs text-muted-foreground">
-                    Switching stops scheduled scans on {losing.map((site) => site.name).join(', ')}.
-                  </p>
-                ) : null}
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={() => onSelect(plan)}
-                  className="rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-muted disabled:opacity-50"
-                >
-                  Switch to {PLAN_NAMES[plan]}
-                </button>
+                {confirming === plan ? (
+                  <ConfirmSwitch
+                    plan={plan}
+                    losing={losing}
+                    pending={pending}
+                    onConfirm={() => {
+                      setConfirming(null);
+                      onSelect(plan);
+                    }}
+                    onCancel={() => setConfirming(null)}
+                  />
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={pending}
+                    onClick={() => setConfirming(plan)}
+                  >
+                    Switch to {PLAN_NAMES[plan]}
+                  </Button>
+                )}
               </div>
             )}
           </section>
