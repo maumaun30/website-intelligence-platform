@@ -7,13 +7,7 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import {
-  type ChangePlanInput,
-  type CreateCheckoutInput,
-  type Principal,
-  changePlanInputSchema,
-  createCheckoutInputSchema,
-} from '@wintel/types';
+import { type CreateCheckoutInput, type Principal, createCheckoutInputSchema } from '@wintel/types';
 
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -42,17 +36,6 @@ export class BillingController {
   @Get()
   state(@CurrentUser() principal: Principal) {
     return this.billing.state(this.orgId(principal));
-  }
-
-  /** A plan switch creates nothing, so it answers 200 rather than Nest's POST default of 201. */
-  @Post('plan')
-  @HttpCode(200)
-  @Roles('owner')
-  changePlan(
-    @CurrentUser() principal: Principal,
-    @Body(new ZodValidationPipe(changePlanInputSchema)) body: ChangePlanInput,
-  ) {
-    return this.billing.changePlan(this.orgId(principal), body.plan);
   }
 
   /** Sends the owner to hosted Stripe Checkout. Answers 200: it creates a Stripe session, not a resource of ours. */

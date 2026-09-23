@@ -313,14 +313,6 @@ describe('billing', () => {
     expect(response.status).toBe(401);
   });
 
-  it('rejects an unauthenticated plan change with 401', async () => {
-    const response = await request(app.getHttpServer())
-      .post('/api/v1/billing/plan')
-      .send({ plan: 'pro' });
-
-    expect(response.status).toBe(401);
-  });
-
   it('rejects an unauthenticated checkout with 401', async () => {
     const response = await request(app.getHttpServer())
       .post('/api/v1/billing/checkout')
@@ -378,7 +370,6 @@ describe('billing', () => {
 describe('billing enforcement', () => {
   let prisma: PrismaClient;
   let cookie: string;
-  let organizationId: string;
   const origin = process.env.BETTER_AUTH_URL ?? 'http://localhost:4000';
 
   beforeAll(async () => {
@@ -399,9 +390,6 @@ describe('billing enforcement', () => {
       .send({ email, password })
       .expect(200);
     cookie = ([] as string[]).concat(signIn.headers['set-cookie'] ?? []).join('; ');
-
-    const me = await request(app.getHttpServer()).get('/api/v1/me').set('Cookie', cookie);
-    organizationId = me.body.activeOrganizationId;
   });
 
   afterAll(async () => {
@@ -426,101 +414,13 @@ describe('billing enforcement', () => {
     expect(second.body.details).toEqual({ code: 'PLAN_WEBSITE_LIMIT', limit: 1, current: 1 });
   });
 
-  it('downgrades a scheduled website back to manual and reports it in downgradedWebsites', async () => {
-    await prisma.organization.update({ where: { id: organizationId }, data: { plan: 'pro' } });
-
-    const created = await request(app.getHttpServer())
-      .post('/api/v1/websites')
-      .set('Cookie', cookie)
-      .set('Origin', origin)
-      .send({ name: 'Scheduled', url: `https://billing-e2e-${randomUUID()}.test` });
-    expect(created.status).toBe(201);
-    const websiteId: string = created.body.id;
-
-    const scheduled = await request(app.getHttpServer())
-      .patch(`/api/v1/websites/${websiteId}`)
-      .set('Cookie', cookie)
-      .send({ scanFrequency: 'daily' });
-    expect(scheduled.status).toBe(200);
-    expect(typeof scheduled.body.nextScanAt).toBe('string');
-
-    const downgrade = await request(app.getHttpServer())
-      .post('/api/v1/billing/plan')
-      .set('Cookie', cookie)
-      .send({ plan: 'free' });
-
-    expect(downgrade.status).toBe(200);
-    expect(downgrade.body.plan).toBe('free');
-    expect(downgrade.body.downgradedWebsites).toContain(websiteId);
-
-    const website = await request(app.getHttpServer())
-      .get(`/api/v1/websites/${websiteId}`)
-      .set('Cookie', cookie);
-    expect(website.body.scanFrequency).toBe('manual');
-    expect(website.body.nextScanAt).toBeNull();
-  });
-
-  it('answers a switch to the plan already in effect with an empty downgrade list', async () => {
+  it('no longer serves the direct plan switch', async () => {
     const response = await request(app.getHttpServer())
       .post('/api/v1/billing/plan')
       .set('Cookie', cookie)
-      .send({ plan: 'free' });
-
-    expect(response.status).toBe(200);
-    expect(response.body.downgradedWebsites).toEqual([]);
-  });
-
-  it('rejects a plan switch by an admin (not owner) with 403', async () => {
-    const adminEmail = `billing-e2e-admin-${randomUUID()}@example.test`;
-    const adminPassword = 'billing-e2e-admin-pass-1234';
-
-    await request(app.getHttpServer())
-      .post('/api/v1/auth/sign-up/email')
-      .set('Origin', origin)
-      .send({ email: adminEmail, password: adminPassword, name: 'Billing Admin' })
-      .expect(200);
-    const adminUser = await prisma.user.findUniqueOrThrow({ where: { email: adminEmail } });
-    await prisma.user.update({ where: { id: adminUser.id }, data: { emailVerified: true } });
-
-    // Sign-up already gave this user a personal organization they own. Back-date an admin
-    // membership of the target org so it is the oldest membership and the first session (created
-    // on sign-in, below) picks it as active — see create-auth.ts's session.create hook.
-    await prisma.member.create({
-      data: {
-        id: randomUUID(),
-        organizationId,
-        userId: adminUser.id,
-        role: 'admin',
-        createdAt: new Date(0),
-      },
-    });
-
-    const adminSignIn = await request(app.getHttpServer())
-      .post('/api/v1/auth/sign-in/email')
-      .set('Origin', origin)
-      .send({ email: adminEmail, password: adminPassword })
-      .expect(200);
-    const adminCookie = ([] as string[]).concat(adminSignIn.headers['set-cookie'] ?? []).join('; ');
-
-    const me = await request(app.getHttpServer()).get('/api/v1/me').set('Cookie', adminCookie);
-    expect(me.body.activeOrganizationId).toBe(organizationId);
-    expect(me.body.role).toBe('admin');
-
-    const response = await request(app.getHttpServer())
-      .post('/api/v1/billing/plan')
-      .set('Cookie', adminCookie)
       .send({ plan: 'pro' });
 
-    expect(response.status).toBe(403);
-  });
-
-  it('rejects an unknown plan value with 400', async () => {
-    const response = await request(app.getHttpServer())
-      .post('/api/v1/billing/plan')
-      .set('Cookie', cookie)
-      .send({ plan: 'ultra' });
-
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(404);
   });
 
   it('refuses a portal session when the organization has never subscribed', async () => {

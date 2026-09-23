@@ -1,27 +1,30 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { OrganizationPlan, PlanChangeResult } from '@wintel/types';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import type { BillingRedirect, PurchasablePlan } from '@wintel/types';
 
 import type { ApiError } from './api-client';
-import { changePlan, getBilling } from './billing-client';
+import { getBilling, openPortal, startCheckout } from './billing-client';
 
 export function useBilling() {
   return useQuery({ queryKey: ['billing'], queryFn: () => getBilling() });
 }
 
-/** A plan change can reset schedules, so websites and the overview are refetched with it. */
-export function useChangePlan() {
-  const queryClient = useQueryClient();
+/** Checkout and portal both end in a full-page redirect to Stripe. */
+export function useStartCheckout() {
+  return useMutation<BillingRedirect, ApiError, PurchasablePlan>({
+    mutationFn: (plan) => startCheckout(plan),
+    onSuccess: ({ url }) => {
+      window.location.assign(url);
+    },
+  });
+}
 
-  return useMutation<PlanChangeResult, ApiError, OrganizationPlan>({
-    mutationFn: (plan) => changePlan(plan),
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['billing'] }),
-        queryClient.invalidateQueries({ queryKey: ['websites'] }),
-        queryClient.invalidateQueries({ queryKey: ['overview'] }),
-      ]);
+export function useOpenPortal() {
+  return useMutation<BillingRedirect, ApiError, void>({
+    mutationFn: () => openPortal(),
+    onSuccess: ({ url }) => {
+      window.location.assign(url);
     },
   });
 }

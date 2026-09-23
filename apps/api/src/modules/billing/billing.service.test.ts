@@ -9,7 +9,6 @@ const repo = (overrides: Partial<Record<string, unknown>> = {}) => ({
   aiUsage: vi.fn().mockResolvedValue(0),
   incrementAiUsageBelow: vi.fn().mockResolvedValue(true),
   listWebsiteFrequencies: vi.fn().mockResolvedValue([]),
-  applyPlanChange: vi.fn().mockResolvedValue(undefined),
   ...overrides,
 });
 
@@ -61,36 +60,6 @@ describe('BillingService.state', () => {
       currentPeriodEnd: '2026-10-21T00:00:00.000Z',
       cancelAtPeriodEnd: true,
     });
-  });
-});
-
-describe('BillingService.changePlan', () => {
-  it('resets only the schedules the new plan forbids and reports them', async () => {
-    const dependencies = repo({
-      plan: vi.fn().mockResolvedValue('free'),
-      listWebsiteFrequencies: vi.fn().mockResolvedValue([
-        { id: 'a', scanFrequency: 'daily' },
-        { id: 'b', scanFrequency: 'manual' },
-      ]),
-    });
-    const service = new BillingService(dependencies as never, subscriptionsRepo() as never);
-
-    const result = await service.changePlan('o1', 'free');
-
-    expect(dependencies.applyPlanChange).toHaveBeenCalledWith('o1', 'free', ['a']);
-    expect(result.downgradedWebsites).toEqual(['a']);
-  });
-
-  it('downgrades no schedules when upgrading', async () => {
-    const dependencies = repo({
-      listWebsiteFrequencies: vi.fn().mockResolvedValue([{ id: 'a', scanFrequency: 'daily' }]),
-    });
-    const service = new BillingService(dependencies as never, subscriptionsRepo() as never);
-
-    const result = await service.changePlan('o1', 'agency');
-
-    expect(dependencies.applyPlanChange).toHaveBeenCalledWith('o1', 'agency', []);
-    expect(result.downgradedWebsites).toEqual([]);
   });
 });
 

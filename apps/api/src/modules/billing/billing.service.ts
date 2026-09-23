@@ -5,7 +5,6 @@ import {
   type OrganizationPlan,
   type QuotaDecision,
   type ScanFrequency,
-  evaluatePlanChange,
   evaluateQuota,
   utcMonthKey,
 } from '@wintel/types';
@@ -55,24 +54,6 @@ export class BillingService {
             cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
           }
         : null,
-    };
-  }
-
-  async changePlan(
-    organizationId: string,
-    plan: OrganizationPlan,
-    now: Date = new Date(),
-  ): Promise<BillingState & { downgradedWebsites: string[] }> {
-    const { frequencyDowngrades } = evaluatePlanChange({
-      plan,
-      websites: await this.repo.listWebsiteFrequencies(organizationId),
-    });
-
-    await this.repo.applyPlanChange(organizationId, plan, frequencyDowngrades);
-
-    return {
-      ...(await this.state(organizationId, now)),
-      downgradedWebsites: frequencyDowngrades,
     };
   }
 

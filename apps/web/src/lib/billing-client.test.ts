@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { changePlan, getBilling } from './billing-client';
+import { getBilling, openPortal, startCheckout } from './billing-client';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -35,6 +35,7 @@ const state = {
       aiExplanationsPerMonth: 500,
     },
   },
+  subscription: null,
 };
 
 describe('getBilling', () => {
@@ -57,19 +58,52 @@ describe('getBilling', () => {
   });
 });
 
-describe('changePlan', () => {
-  it('posts the plan and parses the result', async () => {
+describe('startCheckout', () => {
+  it('posts the plan and returns the redirect url', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
-      json: async () => ({ ...state, plan: 'free', downgradedWebsites: ['w1'] }),
+      json: async () => ({ url: 'https://stripe.test/checkout/o1' }),
     });
     vi.stubGlobal('fetch', fetchMock);
 
-    await expect(changePlan('free')).resolves.toMatchObject({ downgradedWebsites: ['w1'] });
+    await expect(startCheckout('pro')).resolves.toEqual({
+      url: 'https://stripe.test/checkout/o1',
+    });
     expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining('/billing/plan'),
-      expect.objectContaining({ method: 'POST', body: JSON.stringify({ plan: 'free' }) }),
+      expect.stringContaining('/billing/checkout'),
+      expect.objectContaining({ method: 'POST', body: JSON.stringify({ plan: 'pro' }) }),
     );
+  });
+
+  it('carries the refusal code off a failed response', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 409,
+        json: async () => ({ details: { code: 'SUBSCRIPTION_EXISTS' } }),
+      }),
+    );
+
+    await expect(startCheckout('pro')).rejects.toMatchObject({
+      status: 409,
+      code: 'SUBSCRIPTION_EXISTS',
+    });
+  });
+});
+
+describe('openPortal', () => {
+  it('returns the portal url', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ url: 'https://stripe.test/portal/cus_1' }),
+      }),
+    );
+
+    await expect(openPortal()).resolves.toEqual({ url: 'https://stripe.test/portal/cus_1' });
   });
 });

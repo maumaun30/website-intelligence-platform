@@ -126,23 +126,14 @@ export {
   ORGANIZATION_PLANS,
   PLAN_LIMITS,
   billingPlanStateSchema,
-  changePlanInputSchema,
   effectivePageCap,
   evaluatePlanChange,
   evaluateQuota,
-  planChangeResultSchema,
   planLimitsSchema,
   startOfUtcMonth,
   utcMonthKey,
 } from './billing';
-export type {
-  ChangePlanInput,
-  OrganizationPlan,
-  PlanChangeResult,
-  PlanLimits,
-  QuotaDecision,
-  QuotaQuery,
-} from './billing';
+export type { OrganizationPlan, PlanLimits, QuotaDecision, QuotaQuery } from './billing';
 export {
   PURCHASABLE_PLANS,
   SUBSCRIPTION_STATUSES,

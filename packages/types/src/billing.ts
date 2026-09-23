@@ -152,12 +152,3 @@ export const billingPlanStateSchema = z.object({
   }),
   plans: z.record(z.enum(ORGANIZATION_PLANS), planLimitsSchema),
 });
-
-export const planChangeResultSchema = billingPlanStateSchema.extend({
-  downgradedWebsites: z.array(z.string()),
-});
-
-export const changePlanInputSchema = z.object({ plan: z.enum(ORGANIZATION_PLANS) });
-
-export type PlanChangeResult = z.infer<typeof planChangeResultSchema>;
-export type ChangePlanInput = z.infer<typeof changePlanInputSchema>;
