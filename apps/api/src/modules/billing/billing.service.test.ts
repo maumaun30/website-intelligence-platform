@@ -13,13 +13,18 @@ const repo = (overrides: Partial<Record<string, unknown>> = {}) => ({
   ...overrides,
 });
 
+const subscriptionsRepo = (overrides: Partial<Record<string, unknown>> = {}) => ({
+  find: vi.fn().mockResolvedValue(null),
+  ...overrides,
+});
+
 describe('BillingService.state', () => {
   it('reports the plan, its limits, and current usage', async () => {
     const dependencies = repo({
       countWebsites: vi.fn().mockResolvedValue(3),
       aiUsage: vi.fn().mockResolvedValue(7),
     });
-    const service = new BillingService(dependencies as never);
+    const service = new BillingService(dependencies as never, subscriptionsRepo() as never);
 
     const state = await service.state('o1', new Date('2026-09-21T10:00:00.000Z'));
 
@@ -27,6 +32,35 @@ describe('BillingService.state', () => {
     expect(state.limits.websites).toBe(10);
     expect(state.usage).toEqual({ websites: 3, aiExplanationsThisMonth: 7 });
     expect(dependencies.aiUsage).toHaveBeenCalledWith('o1', '2026-09');
+  });
+
+  it('reports no subscription when there is no row', async () => {
+    const service = new BillingService(repo() as never, subscriptionsRepo() as never);
+
+    const state = await service.state('o1', new Date('2026-09-21T10:00:00.000Z'));
+
+    expect(state.subscription).toBeNull();
+  });
+
+  it('reports the subscription summary when a row exists', async () => {
+    const service = new BillingService(
+      repo() as never,
+      subscriptionsRepo({
+        find: vi.fn().mockResolvedValue({
+          status: 'active',
+          currentPeriodEnd: new Date('2026-10-21T00:00:00.000Z'),
+          cancelAtPeriodEnd: true,
+        }),
+      }) as never,
+    );
+
+    const state = await service.state('o1', new Date('2026-09-21T10:00:00.000Z'));
+
+    expect(state.subscription).toEqual({
+      status: 'active',
+      currentPeriodEnd: '2026-10-21T00:00:00.000Z',
+      cancelAtPeriodEnd: true,
+    });
   });
 });
 
@@ -39,7 +73,7 @@ describe('BillingService.changePlan', () => {
         { id: 'b', scanFrequency: 'manual' },
       ]),
     });
-    const service = new BillingService(dependencies as never);
+    const service = new BillingService(dependencies as never, subscriptionsRepo() as never);
 
     const result = await service.changePlan('o1', 'free');
 
@@ -51,7 +85,7 @@ describe('BillingService.changePlan', () => {
     const dependencies = repo({
       listWebsiteFrequencies: vi.fn().mockResolvedValue([{ id: 'a', scanFrequency: 'daily' }]),
     });
-    const service = new BillingService(dependencies as never);
+    const service = new BillingService(dependencies as never, subscriptionsRepo() as never);
 
     const result = await service.changePlan('o1', 'agency');
 
@@ -66,7 +100,7 @@ describe('BillingService quota assertions', () => {
       plan: vi.fn().mockResolvedValue('free'),
       countWebsites: vi.fn().mockResolvedValue(1),
     });
-    const service = new BillingService(dependencies as never);
+    const service = new BillingService(dependencies as never, subscriptionsRepo() as never);
 
     await expect(service.assertWebsiteQuota('o1')).rejects.toMatchObject({
       response: {
@@ -78,13 +112,17 @@ describe('BillingService quota assertions', () => {
   it('allows a website under the plan limit', async () => {
     const service = new BillingService(
       repo({ countWebsites: vi.fn().mockResolvedValue(2) }) as never,
+      subscriptionsRepo() as never,
     );
 
     await expect(service.assertWebsiteQuota('o1')).resolves.toBeUndefined();
   });
 
   it('refuses a scan frequency the plan does not include', async () => {
-    const service = new BillingService(repo({ plan: vi.fn().mockResolvedValue('free') }) as never);
+    const service = new BillingService(
+      repo({ plan: vi.fn().mockResolvedValue('free') }) as never,
+      subscriptionsRepo() as never,
+    );
 
     await expect(service.assertScanFrequency('o1', 'daily')).rejects.toBeInstanceOf(
       ForbiddenException,
@@ -94,7 +132,7 @@ describe('BillingService quota assertions', () => {
 
   it('refuses a locked AI plan without touching the counter', async () => {
     const dependencies = repo({ plan: vi.fn().mockResolvedValue('free') });
-    const service = new BillingService(dependencies as never);
+    const service = new BillingService(dependencies as never, subscriptionsRepo() as never);
 
     await expect(service.consumeAiQuota('o1')).rejects.toMatchObject({
       response: { details: { code: 'PLAN_AI_LOCKED' } },
@@ -104,7 +142,7 @@ describe('BillingService quota assertions', () => {
 
   it('consumes one unit of the current month when under the limit', async () => {
     const dependencies = repo();
-    const service = new BillingService(dependencies as never);
+    const service = new BillingService(dependencies as never, subscriptionsRepo() as never);
 
     await expect(
       service.consumeAiQuota('o1', new Date('2026-09-21T10:00:00.000Z')),
@@ -117,7 +155,7 @@ describe('BillingService quota assertions', () => {
       incrementAiUsageBelow: vi.fn().mockResolvedValue(false),
       aiUsage: vi.fn().mockResolvedValue(100),
     });
-    const service = new BillingService(dependencies as never);
+    const service = new BillingService(dependencies as never, subscriptionsRepo() as never);
 
     await expect(
       service.consumeAiQuota('o1', new Date('2026-09-21T10:00:00.000Z')),

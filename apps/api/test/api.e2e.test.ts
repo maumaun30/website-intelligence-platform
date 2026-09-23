@@ -320,6 +320,20 @@ describe('billing', () => {
 
     expect(response.status).toBe(401);
   });
+
+  it('rejects an unauthenticated checkout with 401', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/billing/checkout')
+      .send({ plan: 'pro' });
+
+    expect(response.status).toBe(401);
+  });
+
+  it('rejects an unauthenticated portal request with 401', async () => {
+    const response = await request(app.getHttpServer()).post('/api/v1/billing/portal');
+
+    expect(response.status).toBe(401);
+  });
 });
 
 describe('billing enforcement', () => {
@@ -466,6 +480,24 @@ describe('billing enforcement', () => {
       .post('/api/v1/billing/plan')
       .set('Cookie', cookie)
       .send({ plan: 'ultra' });
+
+    expect(response.status).toBe(400);
+  });
+
+  it('refuses a portal session when the organization has never subscribed', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/billing/portal')
+      .set('Cookie', cookie);
+
+    expect(response.status).toBe(409);
+    expect(response.body.details).toEqual({ code: 'NO_SUBSCRIPTION' });
+  });
+
+  it('rejects checking out the free plan with 400', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/billing/checkout')
+      .set('Cookie', cookie)
+      .send({ plan: 'free' });
 
     expect(response.status).toBe(400);
   });

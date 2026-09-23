@@ -9,6 +9,8 @@ import { BillingService } from './billing.service';
 import { FakeStripeClient } from './stripe/fake-stripe-client';
 import { LiveStripeClient } from './stripe/live-stripe-client';
 import { STRIPE_CLIENT, type StripeClient } from './stripe/stripe-client';
+import { SubscriptionsRepository } from './subscriptions.repository';
+import { SubscriptionsService } from './subscriptions.service';
 
 function createStripeClient(env: ApiEnv): StripeClient {
   if (env.STRIPE_PROVIDER === 'fake') {
@@ -23,8 +25,10 @@ function createStripeClient(env: ApiEnv): StripeClient {
   providers: [
     BillingService,
     BillingRepository,
+    SubscriptionsService,
+    SubscriptionsRepository,
     { provide: STRIPE_CLIENT, inject: [API_ENV], useFactory: createStripeClient },
   ],
-  exports: [BillingService, STRIPE_CLIENT],
+  exports: [BillingService, SubscriptionsService, STRIPE_CLIENT],
 })
 export class BillingModule {}

@@ -7,7 +7,13 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { type ChangePlanInput, type Principal, changePlanInputSchema } from '@wintel/types';
+import {
+  type ChangePlanInput,
+  type CreateCheckoutInput,
+  type Principal,
+  changePlanInputSchema,
+  createCheckoutInputSchema,
+} from '@wintel/types';
 
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -15,12 +21,16 @@ import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { SessionGuard } from '../auth/session.guard';
 import { BillingService } from './billing.service';
+import { SubscriptionsService } from './subscriptions.service';
 
 /** The active organization's plan. Members read it; only an owner may change it. */
 @Controller('billing')
 @UseGuards(SessionGuard, RolesGuard)
 export class BillingController {
-  constructor(private readonly billing: BillingService) {}
+  constructor(
+    private readonly billing: BillingService,
+    private readonly subscriptions: SubscriptionsService,
+  ) {}
 
   private orgId(principal: Principal): string {
     if (!principal.activeOrganizationId) {
@@ -43,5 +53,24 @@ export class BillingController {
     @Body(new ZodValidationPipe(changePlanInputSchema)) body: ChangePlanInput,
   ) {
     return this.billing.changePlan(this.orgId(principal), body.plan);
+  }
+
+  /** Sends the owner to hosted Stripe Checkout. Answers 200: it creates a Stripe session, not a resource of ours. */
+  @Post('checkout')
+  @HttpCode(200)
+  @Roles('owner')
+  checkout(
+    @CurrentUser() principal: Principal,
+    @Body(new ZodValidationPipe(createCheckoutInputSchema)) body: CreateCheckoutInput,
+  ) {
+    return this.subscriptions.checkout(this.orgId(principal), body.plan, principal.user.email);
+  }
+
+  /** Sends the owner to the hosted Billing Portal to manage an existing subscription. */
+  @Post('portal')
+  @HttpCode(200)
+  @Roles('owner')
+  portal(@CurrentUser() principal: Principal) {
+    return this.subscriptions.portal(this.orgId(principal));
   }
 }

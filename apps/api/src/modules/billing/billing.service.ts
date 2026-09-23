@@ -11,6 +11,7 @@ import {
 } from '@wintel/types';
 
 import { BillingRepository } from './billing.repository';
+import { SubscriptionsRepository } from './subscriptions.repository';
 
 const REFUSAL_MESSAGES = {
   PLAN_WEBSITE_LIMIT: 'Your plan does not allow any more websites',
@@ -25,17 +26,21 @@ const REFUSAL_MESSAGES = {
  */
 @Injectable()
 export class BillingService {
-  constructor(private readonly repo: BillingRepository) {}
+  constructor(
+    private readonly repo: BillingRepository,
+    private readonly subscriptions: SubscriptionsRepository,
+  ) {}
 
   planFor(organizationId: string): Promise<OrganizationPlan> {
     return this.repo.plan(organizationId);
   }
 
   async state(organizationId: string, now: Date = new Date()): Promise<BillingState> {
-    const [plan, websites, aiExplanationsThisMonth] = await Promise.all([
+    const [plan, websites, aiExplanationsThisMonth, subscription] = await Promise.all([
       this.repo.plan(organizationId),
       this.repo.countWebsites(organizationId),
       this.repo.aiUsage(organizationId, utcMonthKey(now)),
+      this.subscriptions.find(organizationId),
     ]);
 
     return {
@@ -43,8 +48,13 @@ export class BillingService {
       limits: PLAN_LIMITS[plan],
       usage: { websites, aiExplanationsThisMonth },
       plans: PLAN_LIMITS,
-      // Filled in by the Stripe task; the field exists now so the API keeps compiling.
-      subscription: null,
+      subscription: subscription
+        ? {
+            status: subscription.status,
+            currentPeriodEnd: subscription.currentPeriodEnd?.toISOString() ?? null,
+            cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+          }
+        : null,
     };
   }
 
