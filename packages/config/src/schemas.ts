@@ -59,24 +59,59 @@ export const aiWorkerEnvSchema = z.object({
   AI_EXPLANATION_PROVIDER: z.enum(['anthropic', 'fake']).default('anthropic'),
 });
 
-export const apiEnvSchema = z.object({
-  ...baseEnvSchema.shape,
-  ...databaseEnvSchema.shape,
-  ...redisEnvSchema.shape,
-  ...appEnvSchema.shape,
-  ...authEnvSchema.shape,
-  ...aiApiEnvSchema.shape,
-  PORT: z.coerce.number().int().min(1).max(65535).default(4000),
-  CORS_ORIGINS: z
-    .string()
-    .default('http://localhost:3000')
-    .transform((value) =>
-      value
-        .split(',')
-        .map((origin) => origin.trim())
-        .filter(Boolean),
-    ),
-});
+/**
+ * Stripe access. `fake` keeps local development and tests offline and is the default, so a
+ * half-configured deployment cannot silently take payments. With `stripe`, all four values are
+ * required and the process refuses to boot without them rather than failing at the first checkout.
+ */
+export const stripeApiEnvSchema = z
+  .object({
+    STRIPE_PROVIDER: z.enum(['stripe', 'fake']).default('fake'),
+    STRIPE_SECRET_KEY: z.string().min(1).optional(),
+    STRIPE_WEBHOOK_SECRET: z.string().min(1).optional(),
+    STRIPE_PRICE_PRO: z.string().min(1).optional(),
+    STRIPE_PRICE_AGENCY: z.string().min(1).optional(),
+  })
+  .superRefine((env, ctx) => {
+    if (env.STRIPE_PROVIDER !== 'stripe') {
+      return;
+    }
+    for (const key of [
+      'STRIPE_SECRET_KEY',
+      'STRIPE_WEBHOOK_SECRET',
+      'STRIPE_PRICE_PRO',
+      'STRIPE_PRICE_AGENCY',
+    ] as const) {
+      if (!env[key]) {
+        ctx.addIssue({
+          code: 'custom',
+          path: [key],
+          message: `${key} is required when STRIPE_PROVIDER is "stripe"`,
+        });
+      }
+    }
+  });
+
+export const apiEnvSchema = z
+  .object({
+    ...baseEnvSchema.shape,
+    ...databaseEnvSchema.shape,
+    ...redisEnvSchema.shape,
+    ...appEnvSchema.shape,
+    ...authEnvSchema.shape,
+    ...aiApiEnvSchema.shape,
+    PORT: z.coerce.number().int().min(1).max(65535).default(4000),
+    CORS_ORIGINS: z
+      .string()
+      .default('http://localhost:3000')
+      .transform((value) =>
+        value
+          .split(',')
+          .map((origin) => origin.trim())
+          .filter(Boolean),
+      ),
+  })
+  .and(stripeApiEnvSchema);
 
 export const workerEnvSchema = z.object({
   ...baseEnvSchema.shape,
