@@ -26,6 +26,17 @@ const PLAN_BEARING_TYPES = [
   'customer.subscription.updated',
 ] as const;
 
+// Finding 1: only these three describe one Stripe subscription object's lifecycle, in order.
+// They are the sole stream allowed to consult or advance `lastEventAt`. `checkout.session.completed`
+// and the invoice events are independent facts on a shared customer — they neither read nor write
+// the watermark, so a session delivered before its slightly-older subscription.created cannot
+// strand that event (and the plan it carries) behind a stale check.
+const SUBSCRIPTION_LIFECYCLE_TYPES = [
+  'customer.subscription.created',
+  'customer.subscription.updated',
+  'customer.subscription.deleted',
+] as const;
+
 function readString(object: Record<string, unknown>, key: string): string | null {
   const value = object[key];
   return typeof value === 'string' ? value : null;
@@ -61,8 +72,16 @@ export class StripeEventsService {
     }
 
     const eventCreated = new Date(event.created * 1000);
-    // Stripe retries can arrive out of order; a stale update must not undo a newer one.
-    if (existing.lastEventAt && existing.lastEventAt > eventCreated) {
+    const isSubscriptionLifecycleEvent = (
+      SUBSCRIPTION_LIFECYCLE_TYPES as readonly string[]
+    ).includes(event.type);
+    // Stripe retries can arrive out of order; a stale update must not undo a newer one. Only the
+    // subscription lifecycle stream consults the watermark — see Finding 1 above.
+    if (
+      isSubscriptionLifecycleEvent &&
+      existing.lastEventAt &&
+      existing.lastEventAt > eventCreated
+    ) {
       return;
     }
 
@@ -76,15 +95,18 @@ export class StripeEventsService {
 
     const currentPeriodEnd = this.periodEnd(object);
     const cancelAtPeriodEnd = this.cancelAtPeriodEndFor(object);
+    const status = this.statusFor(event, object);
 
     await this.subscriptions.applyStripeState({
       eventId: event.id,
       eventType: event.type,
-      eventCreated,
+      // Finding 1: only the subscription lifecycle stream advances the watermark.
+      ...(isSubscriptionLifecycleEvent ? { eventCreated } : {}),
       organizationId: existing.organizationId,
       stripeCustomerId: customerId,
       stripeSubscriptionId: this.subscriptionIdFor(event, object, existing.stripeSubscriptionId),
-      status: this.statusFor(event, object),
+      // Finding 2: a checkout session carries no subscription status of its own.
+      ...(status === undefined ? {} : { status }),
       ...(plan ? { plan } : {}),
       ...(event.type === 'invoice.payment_failed' || event.type === 'invoice.payment_succeeded'
         ? {}
@@ -124,7 +146,7 @@ export class StripeEventsService {
   private statusFor(
     event: StripeWebhookEvent,
     object: Record<string, unknown>,
-  ): SubscriptionStatus {
+  ): SubscriptionStatus | undefined {
     if (event.type === 'customer.subscription.deleted') {
       return 'canceled';
     }
@@ -134,9 +156,13 @@ export class StripeEventsService {
     if (event.type === 'invoice.payment_succeeded') {
       return 'active';
     }
-    // Never assume `active`: a card needing authentication arrives `incomplete`, and a checkout
-    // session's own `status` ("complete"/"open"/"expired") is not a subscription status either —
-    // it falls through to `incomplete` until the subscription event that follows corrects it.
+    // Finding 2: a checkout session's own `status` ("complete"/"open"/"expired") is not a
+    // subscription status at all — omit the key rather than writing a guessed `incomplete` that
+    // could regress a real `active`. The subscription event that follows carries the real status.
+    if (event.type === 'checkout.session.completed') {
+      return undefined;
+    }
+    // Never assume `active`: a card needing authentication arrives `incomplete`.
     const status = readString(object, 'status');
     return status === 'active' ||
       status === 'trialing' ||

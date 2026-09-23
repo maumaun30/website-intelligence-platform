@@ -46,18 +46,20 @@ export class SubscriptionsRepository {
    * schedules a lower plan forbids — all or nothing. The `StripeEvent` insert is the idempotency
    * guard, so a redelivered event writes nothing and returns false.
    *
-   * `currentPeriodEnd` and `cancelAtPeriodEnd` are only written when the caller actually supplies
-   * them: an event whose object carries neither (a bare checkout session, say) must leave the
-   * stored values exactly as they are, not null them out.
+   * `status`, `currentPeriodEnd`, `cancelAtPeriodEnd` and `eventCreated` (the `lastEventAt`
+   * watermark) are only written when the caller actually supplies them: an event whose object
+   * carries neither (a bare checkout session, say) must leave the stored values exactly as they
+   * are, not null or overwrite them. In particular, only the caller for a `customer.subscription.*`
+   * event passes `eventCreated` — see Finding 1 in stripe-events.service.ts.
    */
   async applyStripeState(input: {
     eventId: string;
     eventType: string;
-    eventCreated: Date;
+    eventCreated?: Date;
     organizationId: string;
     stripeCustomerId: string;
     stripeSubscriptionId?: string | null;
-    status: SubscriptionStatus;
+    status?: SubscriptionStatus;
     plan?: OrganizationPlan;
     currentPeriodEnd?: Date;
     cancelAtPeriodEnd?: boolean;
@@ -71,7 +73,7 @@ export class SubscriptionsRepository {
           where: { organizationId: input.organizationId },
           data: {
             stripeSubscriptionId: input.stripeSubscriptionId,
-            status: input.status,
+            ...(input.status === undefined ? {} : { status: input.status }),
             ...(input.plan ? { plan: input.plan } : {}),
             ...(input.currentPeriodEnd === undefined
               ? {}
@@ -79,7 +81,7 @@ export class SubscriptionsRepository {
             ...(input.cancelAtPeriodEnd === undefined
               ? {}
               : { cancelAtPeriodEnd: input.cancelAtPeriodEnd }),
-            lastEventAt: input.eventCreated,
+            ...(input.eventCreated === undefined ? {} : { lastEventAt: input.eventCreated }),
           },
         });
 

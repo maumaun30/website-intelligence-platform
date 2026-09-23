@@ -178,4 +178,68 @@ describe('StripeEventsService.applyEvent', () => {
     expect('currentPeriodEnd' in written).toBe(false);
     expect('cancelAtPeriodEnd' in written).toBe(false);
   });
+
+  // Finding 1: only customer.subscription.* consults or advances the lastEventAt watermark.
+  // Stripe does not guarantee delivery order and the subscription object is typically created
+  // slightly before the checkout session completes, so a session delivered first must not strand
+  // a strictly-earlier subscription.created event that carries the plan.
+  it('does not let a checkout session watermark block an earlier subscription.created event', async () => {
+    let lastEventAt: Date | null = null;
+    const applyStripeState = vi.fn().mockImplementation(async (input: Record<string, unknown>) => {
+      if (typeof input['eventCreated'] !== 'undefined') {
+        lastEventAt = input['eventCreated'] as Date;
+      }
+      return true;
+    });
+    const findByCustomer = vi.fn().mockImplementation(async () => ({
+      organizationId: 'o1',
+      stripeCustomerId: 'cus_1',
+      stripeSubscriptionId: null,
+      lastEventAt,
+    }));
+    const service = new StripeEventsService(
+      { findByCustomer, applyStripeState } as never,
+      { listWebsiteFrequencies: vi.fn().mockResolvedValue([]) } as never,
+      env,
+    );
+
+    // T: the checkout session completes.
+    await service.applyEvent(checkoutEvent({}, 2_000));
+    // T-1: the subscription object, created slightly earlier, carries the pro price.
+    await service.applyEvent(subscriptionEvent('customer.subscription.created', {}, 1_000));
+
+    expect(applyStripeState).toHaveBeenCalledTimes(2);
+    const secondCall = applyStripeState.mock.calls[1]![0] as { plan?: string };
+    expect(secondCall.plan).toBe('pro');
+  });
+
+  // Finding 2: a checkout session's own status ('complete'/'open'/'expired') is not a subscription
+  // status and must not overwrite a real 'active' status with 'incomplete'.
+  it('does not regress an active status when a checkout session follows a subscription update', async () => {
+    let status: string | undefined;
+    const applyStripeState = vi.fn().mockImplementation(async (input: Record<string, unknown>) => {
+      if (typeof input['status'] !== 'undefined') {
+        status = input['status'] as string;
+      }
+      return true;
+    });
+    const findByCustomer = vi.fn().mockResolvedValue({
+      organizationId: 'o1',
+      stripeCustomerId: 'cus_1',
+      stripeSubscriptionId: null,
+      lastEventAt: null,
+    });
+    const service = new StripeEventsService(
+      { findByCustomer, applyStripeState } as never,
+      { listWebsiteFrequencies: vi.fn().mockResolvedValue([]) } as never,
+      env,
+    );
+
+    await service.applyEvent(
+      subscriptionEvent('customer.subscription.updated', { status: 'active' }),
+    );
+    await service.applyEvent(checkoutEvent());
+
+    expect(status).toBe('active');
+  });
 });
