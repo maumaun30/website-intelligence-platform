@@ -9,6 +9,8 @@ import { BillingService } from './billing.service';
 import { FakeStripeClient } from './stripe/fake-stripe-client';
 import { LiveStripeClient } from './stripe/live-stripe-client';
 import { STRIPE_CLIENT, type StripeClient } from './stripe/stripe-client';
+import { StripeEventsService } from './stripe-events.service';
+import { StripeWebhookController } from './stripe-webhook.controller';
 import { SubscriptionsRepository } from './subscriptions.repository';
 import { SubscriptionsService } from './subscriptions.service';
 
@@ -21,12 +23,13 @@ function createStripeClient(env: ApiEnv): StripeClient {
 
 /** Plan state plus the quota gate every other feature module imports. */
 @Module({
-  controllers: [BillingController],
+  controllers: [BillingController, StripeWebhookController],
   providers: [
     BillingService,
     BillingRepository,
     SubscriptionsService,
     SubscriptionsRepository,
+    StripeEventsService,
     { provide: STRIPE_CLIENT, inject: [API_ENV], useFactory: createStripeClient },
   ],
   exports: [BillingService, SubscriptionsService, STRIPE_CLIENT],

@@ -334,6 +334,30 @@ describe('billing', () => {
 
     expect(response.status).toBe(401);
   });
+
+  it('rejects a webhook with no signature', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/billing/webhook')
+      .set('content-type', 'application/json')
+      .send({ id: 'evt_1', type: 'customer.created', created: 1, data: { object: {} } });
+
+    expect(response.status).toBe(400);
+  });
+
+  it('accepts a correctly signed webhook for an unknown customer', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/billing/webhook')
+      .set('content-type', 'application/json')
+      .set('stripe-signature', 'fake')
+      .send({
+        id: 'evt_2',
+        type: 'customer.subscription.updated',
+        created: 1,
+        data: { object: { customer: 'cus_unknown' } },
+      });
+
+    expect(response.status).toBe(200);
+  });
 });
 
 describe('billing enforcement', () => {
