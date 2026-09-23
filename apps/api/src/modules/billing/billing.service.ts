@@ -43,6 +43,8 @@ export class BillingService {
       limits: PLAN_LIMITS[plan],
       usage: { websites, aiExplanationsThisMonth },
       plans: PLAN_LIMITS,
+      // Filled in by the Stripe task; the field exists now so the API keeps compiling.
+      subscription: null,
     };
   }
 

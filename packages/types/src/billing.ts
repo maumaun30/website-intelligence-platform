@@ -139,8 +139,11 @@ export const planLimitsSchema = z.object({
   aiExplanationsPerMonth: z.number().int(),
 });
 
-/** What `GET /billing` returns: the current plan, its limits, usage, and the full catalog. */
-export const billingStateSchema = z.object({
+/**
+ * The plan half of what `GET /billing` returns. `stripe.ts` extends it with the subscription,
+ * and that extension is what the API serves and the web app parses.
+ */
+export const billingPlanStateSchema = z.object({
   plan: z.enum(ORGANIZATION_PLANS),
   limits: planLimitsSchema,
   usage: z.object({
@@ -150,12 +153,11 @@ export const billingStateSchema = z.object({
   plans: z.record(z.enum(ORGANIZATION_PLANS), planLimitsSchema),
 });
 
-export const planChangeResultSchema = billingStateSchema.extend({
+export const planChangeResultSchema = billingPlanStateSchema.extend({
   downgradedWebsites: z.array(z.string()),
 });
 
 export const changePlanInputSchema = z.object({ plan: z.enum(ORGANIZATION_PLANS) });
 
-export type BillingState = z.infer<typeof billingStateSchema>;
 export type PlanChangeResult = z.infer<typeof planChangeResultSchema>;
 export type ChangePlanInput = z.infer<typeof changePlanInputSchema>;
