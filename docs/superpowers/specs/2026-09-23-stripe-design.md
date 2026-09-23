@@ -56,7 +56,7 @@ an organization is on.
 | Plan column | `Organization.plan` stays exactly as slice 8 left it | Every quota check in the API and the worker keeps reading one column; no enforcement code changes. |
 | Billing record | New `Subscription` model, one row per organization | Stripe ids, status and period end do not belong on `Organization`, and a separate row keeps the billing concern isolated. |
 | Idempotency | `StripeEvent` table keyed on Stripe's event id, inserted in the same transaction as the write | Stripe delivers at-least-once. A duplicate insert means "already applied" and the handler returns 200 without writing twice. |
-| Ordering | A subscription event older than the stored `Subscription.updatedAt` is recorded and ignored | Retries can arrive out of order; without this, a stale `updated` event can undo a newer one. |
+| Ordering | `Subscription.lastEventAt` stores the `created` timestamp of the last applied event; an event with an older `created` is recorded and ignored | Retries can arrive out of order; without this, a stale `updated` event can undo a newer one. Stripe's own timestamp is the watermark — comparing against our `updatedAt` would compare two systems' clocks. |
 | Payment failure | `invoice.payment_failed` sets status `past_due` and leaves the plan alone; only `customer.subscription.deleted` drops to `free` | One rule, and Stripe's dunning configuration stays the single place that decides timing. An expired card over a weekend must not clear a customer's scan schedules. |
 | Downgrade side effects | Webhook handlers reuse slice 8's `evaluatePlanChange` and apply the same schedule resets | A Stripe cancellation and an in-app downgrade must leave the database in the same state. |
 | Signature verification | `express.raw` mounted on the webhook path only, before the global `json()` | Verification needs the exact signed bytes; a parsed-and-restringified body fails on unicode and key order. The bootstrap already does this for Better Auth. |
@@ -85,6 +85,8 @@ model Subscription {
   plan                 OrganizationPlan
   currentPeriodEnd     DateTime?
   cancelAtPeriodEnd    Boolean            @default(false)
+  /// `created` of the newest Stripe event applied to this row; older events are ignored.
+  lastEventAt          DateTime?
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
 
