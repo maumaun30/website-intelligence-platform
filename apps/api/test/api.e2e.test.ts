@@ -344,6 +344,21 @@ describe('billing', () => {
     expect(response.status).toBe(400);
   });
 
+  it('rejects a webhook with a bad signature', async () => {
+    // Unlike the "no signature" case above (which short-circuits on the missing-header check
+    // before the controller ever calls the Stripe client), this one carries a header and a raw
+    // JSON body, so it reaches `stripe.constructEvent` and exercises the controller's
+    // `StripeSignatureError` -> 400 catch branch. `STRIPE_PROVIDER=fake` in tests accepts only the
+    // literal signature "fake" (see FakeStripeClient.constructEvent), so "bogus" fails it.
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/billing/webhook')
+      .set('content-type', 'application/json')
+      .set('stripe-signature', 'bogus')
+      .send({ id: 'evt_bad_sig', type: 'customer.created', created: 1, data: { object: {} } });
+
+    expect(response.status).toBe(400);
+  });
+
   it('accepts a correctly signed webhook for an unknown customer', async () => {
     const response = await request(app.getHttpServer())
       .post('/api/v1/billing/webhook')

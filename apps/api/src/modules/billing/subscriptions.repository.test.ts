@@ -209,4 +209,37 @@ describe('SubscriptionsRepository.applyStripeState', () => {
     expect(subscription.currentPeriodEnd).toEqual(periodEnd);
     expect(subscription.status).toBe('incomplete');
   });
+
+  // Finding 3: only a P2002 on the StripeEvent primary key means "already applied". A genuine
+  // collision on Subscription.stripeSubscriptionId (a different unique constraint) must propagate
+  // so Stripe gets a 500 and retries, instead of being swallowed as a false-duplicate 200.
+  it('propagates a P2002 on a different unique constraint instead of swallowing it', async () => {
+    const organizationId = await seedOrganization('pro');
+    const stripeCustomerId = `cus_${randomUUID()}`;
+    await seedSubscription(organizationId, stripeCustomerId);
+
+    const otherOrganizationId = await seedOrganization('pro');
+    const otherStripeCustomerId = `cus_${randomUUID()}`;
+    await seedSubscription(otherOrganizationId, otherStripeCustomerId);
+
+    await expect(
+      repo.applyStripeState({
+        eventId: `evt_${randomUUID()}`,
+        eventType: 'customer.subscription.updated',
+        eventCreated: new Date('2026-09-20T00:00:00.000Z'),
+        organizationId: otherOrganizationId,
+        stripeCustomerId: otherStripeCustomerId,
+        // Already attached to `organizationId` by seedSubscription — a real unique collision.
+        stripeSubscriptionId: `sub_${stripeCustomerId}`,
+        status: 'active',
+        plan: 'pro',
+        downgradedWebsiteIds: [],
+      }),
+    ).rejects.toThrow();
+
+    const otherSubscription = await prisma.subscription.findUniqueOrThrow({
+      where: { organizationId: otherOrganizationId },
+    });
+    expect(otherSubscription.stripeSubscriptionId).toBe(`sub_${otherStripeCustomerId}`);
+  });
 });

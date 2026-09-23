@@ -46,11 +46,12 @@ export class SubscriptionsRepository {
    * schedules a lower plan forbids — all or nothing. The `StripeEvent` insert is the idempotency
    * guard, so a redelivered event writes nothing and returns false.
    *
-   * `status`, `currentPeriodEnd`, `cancelAtPeriodEnd` and `eventCreated` (the `lastEventAt`
-   * watermark) are only written when the caller actually supplies them: an event whose object
-   * carries neither (a bare checkout session, say) must leave the stored values exactly as they
-   * are, not null or overwrite them. In particular, only the caller for a `customer.subscription.*`
-   * event passes `eventCreated` — see Finding 1 in stripe-events.service.ts.
+   * `stripeSubscriptionId`, `status`, `currentPeriodEnd`, `cancelAtPeriodEnd` and `eventCreated`
+   * (the `lastEventAt` watermark) are only written when the caller actually supplies them: an
+   * event whose object carries neither (a bare checkout session, or either invoice event, say)
+   * must leave the stored values exactly as they are, not null or overwrite them. In particular,
+   * only the caller for a `customer.subscription.*` event passes `eventCreated` — see Finding 1 in
+   * stripe-events.service.ts — and invoice events never pass `stripeSubscriptionId` — see Finding 4.
    */
   async applyStripeState(input: {
     eventId: string;
@@ -72,7 +73,12 @@ export class SubscriptionsRepository {
         await tx.subscription.update({
           where: { organizationId: input.organizationId },
           data: {
-            stripeSubscriptionId: input.stripeSubscriptionId,
+            // Finding 4: omitted (not merely null) means "the event carried no subscription id" —
+            // leave the stored value untouched, same omission pattern as the fields below.
+            // `null` is still a deliberate write (customer.subscription.deleted clears it).
+            ...(input.stripeSubscriptionId === undefined
+              ? {}
+              : { stripeSubscriptionId: input.stripeSubscriptionId }),
             ...(input.status === undefined ? {} : { status: input.status }),
             ...(input.plan ? { plan: input.plan } : {}),
             ...(input.currentPeriodEnd === undefined
@@ -104,7 +110,19 @@ export class SubscriptionsRepository {
       });
       return true;
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      // Only a P2002 on StripeEvent's own primary key ("id") means "already applied" — a
+      // redelivery colliding with the idempotency guard. Confirmed empirically (see task-5
+      // report): Prisma reports that as `{ modelName: 'StripeEvent', target: ['id'] }`. Any other
+      // P2002 (e.g. a genuine collision on Subscription.stripeSubscriptionId, which is also
+      // @unique) is a real constraint violation and must propagate as a 500 so Stripe retries —
+      // swallowing it here would silently drop the event forever.
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002' &&
+        error.meta?.['modelName'] === 'StripeEvent' &&
+        Array.isArray(error.meta['target']) &&
+        (error.meta['target'] as unknown[]).includes('id')
+      ) {
         return false; // already applied
       }
       throw error;

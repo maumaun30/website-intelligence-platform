@@ -242,4 +242,23 @@ describe('StripeEventsService.applyEvent', () => {
 
     expect(status).toBe('active');
   });
+
+  // Finding 4: an invoice event carries no subscription id of its own. Echoing back the value
+  // read outside the transaction (`existing.stripeSubscriptionId`) re-writes a possibly-stale
+  // value; omit the key instead, exactly as Ruling B omits the period fields.
+  it('omits the stripeSubscriptionId key for an invoice event, which carries no subscription id of its own', async () => {
+    const { service, applyStripeState } = make({
+      findByCustomer: vi.fn().mockResolvedValue({
+        organizationId: 'o1',
+        stripeCustomerId: 'cus_1',
+        stripeSubscriptionId: 'sub_current',
+        lastEventAt: null,
+      }),
+    });
+
+    await service.applyEvent(subscriptionEvent('invoice.payment_succeeded'));
+
+    const written = applyStripeState.mock.calls[0]![0] as Record<string, unknown>;
+    expect('stripeSubscriptionId' in written).toBe(false);
+  });
 });

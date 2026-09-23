@@ -96,6 +96,11 @@ export class StripeEventsService {
     const currentPeriodEnd = this.periodEnd(object);
     const cancelAtPeriodEnd = this.cancelAtPeriodEndFor(object);
     const status = this.statusFor(event, object);
+    const stripeSubscriptionId = this.subscriptionIdFor(
+      event,
+      object,
+      existing.stripeSubscriptionId,
+    );
 
     await this.subscriptions.applyStripeState({
       eventId: event.id,
@@ -104,7 +109,10 @@ export class StripeEventsService {
       ...(isSubscriptionLifecycleEvent ? { eventCreated } : {}),
       organizationId: existing.organizationId,
       stripeCustomerId: customerId,
-      stripeSubscriptionId: this.subscriptionIdFor(event, object, existing.stripeSubscriptionId),
+      // Finding 4: an invoice event carries no subscription id of its own — omit the key rather
+      // than echoing back `existing.stripeSubscriptionId`, a value read outside this transaction
+      // that could be stale by the time this write lands.
+      ...(stripeSubscriptionId === undefined ? {} : { stripeSubscriptionId }),
       // Finding 2: a checkout session carries no subscription status of its own.
       ...(status === undefined ? {} : { status }),
       ...(plan ? { plan } : {}),
@@ -173,11 +181,16 @@ export class StripeEventsService {
       : 'incomplete';
   }
 
+  /**
+   * Finding 4: the invoice events (the `undefined` fallthrough below) carry no subscription id of
+   * their own — returning `undefined` tells the caller to omit the key rather than echo back
+   * `current`, a value read outside the transaction that could be stale by write time.
+   */
   private subscriptionIdFor(
     event: StripeWebhookEvent,
     object: Record<string, unknown>,
     current: string | null,
-  ): string | null {
+  ): string | null | undefined {
     if (event.type === 'customer.subscription.deleted') {
       return null;
     }
@@ -190,7 +203,7 @@ export class StripeEventsService {
     ) {
       return readString(object, 'id') ?? current;
     }
-    return current;
+    return undefined;
   }
 
   private periodEnd(object: Record<string, unknown>): Date | undefined {
