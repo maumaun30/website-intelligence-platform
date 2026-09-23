@@ -117,12 +117,50 @@ model Organization {
   plan      OrganizationPlan @default(free)
   createdAt DateTime @default(now())
 
-  members     Member[]
-  invitations Invitation[]
-  websites    Website[]
+  members      Member[]
+  invitations  Invitation[]
+  websites     Website[]
+  subscription Subscription?
 
   @@unique([slug])
   @@map("organization")
+}
+
+enum SubscriptionStatus {
+  active
+  trialing
+  past_due
+  canceled
+  incomplete
+}
+
+/// What Stripe says an organization pays for. `Organization.plan` is what the quota rules read;
+/// this row is the billing record behind it, and the two are always written together.
+model Subscription {
+  organizationId       String             @id
+  organization         Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  stripeCustomerId     String             @unique
+  stripeSubscriptionId String?            @unique
+  status               SubscriptionStatus
+  plan                 OrganizationPlan
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean            @default(false)
+  /// `created` of the newest Stripe event applied to this row; older events are ignored.
+  lastEventAt          DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@map("subscription")
+}
+
+/// Every Stripe event already applied, by Stripe's own event id. The insert is the idempotency
+/// guard: a duplicate delivery collides here and the handler stops without writing twice.
+model StripeEvent {
+  id          String   @id
+  type        String
+  processedAt DateTime @default(now())
+
+  @@map("stripe_event")
 }
 
 model Member {
