@@ -43,6 +43,7 @@ const billingState = {
       aiExplanationsPerMonth: 500,
     },
   },
+  subscription: null,
 };
 
 function renderWithQueryClient(node: ReactNode) {

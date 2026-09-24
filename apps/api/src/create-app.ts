@@ -2,7 +2,7 @@ import type { INestApplication } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import type { ApiEnv } from '@wintel/config';
 import { toNodeHandler } from 'better-auth/node';
-import { json } from 'express';
+import { json, raw } from 'express';
 import { Logger } from 'nestjs-pino';
 
 import { AppModule } from './app.module';
@@ -25,6 +25,9 @@ export async function createApiApp(env: ApiEnv): Promise<INestApplication> {
 
   const auth = app.get<Auth>(AUTH_INSTANCE);
   app.use('/api/v1/auth', toNodeHandler(auth));
+  // Stripe signs the exact bytes it sends, so this one route must not be JSON-parsed: it needs
+  // the raw Buffer body, mounted here for the same reason auth runs before json() above.
+  app.use('/api/v1/billing/webhook', raw({ type: 'application/json' }));
   app.use(json());
 
   app.setGlobalPrefix('api/v1');

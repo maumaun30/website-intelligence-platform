@@ -313,12 +313,57 @@ describe('billing', () => {
     expect(response.status).toBe(401);
   });
 
-  it('rejects an unauthenticated plan change with 401', async () => {
+  it('rejects an unauthenticated checkout with 401', async () => {
     const response = await request(app.getHttpServer())
-      .post('/api/v1/billing/plan')
+      .post('/api/v1/billing/checkout')
       .send({ plan: 'pro' });
 
     expect(response.status).toBe(401);
+  });
+
+  it('rejects an unauthenticated portal request with 401', async () => {
+    const response = await request(app.getHttpServer()).post('/api/v1/billing/portal');
+
+    expect(response.status).toBe(401);
+  });
+
+  it('rejects a webhook with no signature', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/billing/webhook')
+      .set('content-type', 'application/json')
+      .send({ id: 'evt_1', type: 'customer.created', created: 1, data: { object: {} } });
+
+    expect(response.status).toBe(400);
+  });
+
+  it('rejects a webhook with a bad signature', async () => {
+    // Unlike the "no signature" case above (which short-circuits on the missing-header check
+    // before the controller ever calls the Stripe client), this one carries a header and a raw
+    // JSON body, so it reaches `stripe.constructEvent` and exercises the controller's
+    // `StripeSignatureError` -> 400 catch branch. `STRIPE_PROVIDER=fake` in tests accepts only the
+    // literal signature "fake" (see FakeStripeClient.constructEvent), so "bogus" fails it.
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/billing/webhook')
+      .set('content-type', 'application/json')
+      .set('stripe-signature', 'bogus')
+      .send({ id: 'evt_bad_sig', type: 'customer.created', created: 1, data: { object: {} } });
+
+    expect(response.status).toBe(400);
+  });
+
+  it('accepts a correctly signed webhook for an unknown customer', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/billing/webhook')
+      .set('content-type', 'application/json')
+      .set('stripe-signature', 'fake')
+      .send({
+        id: 'evt_2',
+        type: 'customer.subscription.updated',
+        created: 1,
+        data: { object: { customer: 'cus_unknown' } },
+      });
+
+    expect(response.status).toBe(200);
   });
 });
 
@@ -373,51 +418,16 @@ describe('billing enforcement', () => {
     expect(second.body.details).toEqual({ code: 'PLAN_WEBSITE_LIMIT', limit: 1, current: 1 });
   });
 
-  it('downgrades a scheduled website back to manual and reports it in downgradedWebsites', async () => {
-    await prisma.organization.update({ where: { id: organizationId }, data: { plan: 'pro' } });
-
-    const created = await request(app.getHttpServer())
-      .post('/api/v1/websites')
-      .set('Cookie', cookie)
-      .set('Origin', origin)
-      .send({ name: 'Scheduled', url: `https://billing-e2e-${randomUUID()}.test` });
-    expect(created.status).toBe(201);
-    const websiteId: string = created.body.id;
-
-    const scheduled = await request(app.getHttpServer())
-      .patch(`/api/v1/websites/${websiteId}`)
-      .set('Cookie', cookie)
-      .send({ scanFrequency: 'daily' });
-    expect(scheduled.status).toBe(200);
-    expect(typeof scheduled.body.nextScanAt).toBe('string');
-
-    const downgrade = await request(app.getHttpServer())
-      .post('/api/v1/billing/plan')
-      .set('Cookie', cookie)
-      .send({ plan: 'free' });
-
-    expect(downgrade.status).toBe(200);
-    expect(downgrade.body.plan).toBe('free');
-    expect(downgrade.body.downgradedWebsites).toContain(websiteId);
-
-    const website = await request(app.getHttpServer())
-      .get(`/api/v1/websites/${websiteId}`)
-      .set('Cookie', cookie);
-    expect(website.body.scanFrequency).toBe('manual');
-    expect(website.body.nextScanAt).toBeNull();
-  });
-
-  it('answers a switch to the plan already in effect with an empty downgrade list', async () => {
+  it('no longer serves the direct plan switch', async () => {
     const response = await request(app.getHttpServer())
       .post('/api/v1/billing/plan')
       .set('Cookie', cookie)
-      .send({ plan: 'free' });
+      .send({ plan: 'pro' });
 
-    expect(response.status).toBe(200);
-    expect(response.body.downgradedWebsites).toEqual([]);
+    expect(response.status).toBe(404);
   });
 
-  it('rejects a plan switch by an admin (not owner) with 403', async () => {
+  it('rejects checkout by an admin (not owner) with 403', async () => {
     const adminEmail = `billing-e2e-admin-${randomUUID()}@example.test`;
     const adminPassword = 'billing-e2e-admin-pass-1234';
 
@@ -454,18 +464,27 @@ describe('billing enforcement', () => {
     expect(me.body.role).toBe('admin');
 
     const response = await request(app.getHttpServer())
-      .post('/api/v1/billing/plan')
+      .post('/api/v1/billing/checkout')
       .set('Cookie', adminCookie)
       .send({ plan: 'pro' });
 
     expect(response.status).toBe(403);
   });
 
-  it('rejects an unknown plan value with 400', async () => {
+  it('refuses a portal session when the organization has never subscribed', async () => {
     const response = await request(app.getHttpServer())
-      .post('/api/v1/billing/plan')
+      .post('/api/v1/billing/portal')
+      .set('Cookie', cookie);
+
+    expect(response.status).toBe(409);
+    expect(response.body.details).toEqual({ code: 'NO_SUBSCRIPTION' });
+  });
+
+  it('rejects checking out the free plan with 400', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/billing/checkout')
       .set('Cookie', cookie)
-      .send({ plan: 'ultra' });
+      .send({ plan: 'free' });
 
     expect(response.status).toBe(400);
   });

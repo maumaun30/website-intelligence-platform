@@ -3,20 +3,13 @@
 import { Button } from '@wintel/ui';
 import {
   ORGANIZATION_PLANS,
+  PURCHASABLE_PLANS,
   type OrganizationPlan,
   type PlanLimits,
-  type ScanFrequency,
-  evaluatePlanChange,
+  type PurchasablePlan,
 } from '@wintel/types';
-import { useEffect, useId, useRef, useState } from 'react';
 
 import { UsageBar } from './usage-bar';
-
-interface WebsiteSummary {
-  id: string;
-  name: string;
-  scanFrequency: ScanFrequency;
-}
 
 const PLAN_NAMES: Record<OrganizationPlan, string> = {
   free: 'Free',
@@ -35,99 +28,36 @@ function describe(limits: PlanLimits): string[] {
   ];
 }
 
-/**
- * The confirm step every switch goes through. A downgrade resets schedules and the previous
- * frequencies are not kept, so the step names each website that will lose its schedule.
- */
-function ConfirmSwitch({
-  plan,
-  losing,
-  pending,
-  onConfirm,
-  onCancel,
-}: {
-  plan: OrganizationPlan;
-  losing: WebsiteSummary[];
-  pending: boolean;
-  onConfirm: () => void;
-  onCancel: () => void;
-}) {
-  const titleId = useId();
-  const descriptionId = useId();
-  const region = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    region.current?.focus();
-  }, []);
-
-  return (
-    <div
-      ref={region}
-      role="alertdialog"
-      aria-labelledby={titleId}
-      aria-describedby={descriptionId}
-      tabIndex={-1}
-      onKeyDown={(event) => {
-        if (event.key === 'Escape') {
-          onCancel();
-        }
-      }}
-      className="flex flex-col gap-3 rounded-md border border-border bg-muted/40 p-3 outline-none focus-visible:ring-2 focus-visible:ring-ring"
-    >
-      <p id={titleId} className="text-sm font-medium">
-        Switch to {PLAN_NAMES[plan]}?
-      </p>
-      <div id={descriptionId} className="flex flex-col gap-1 text-xs text-muted-foreground">
-        {losing.length > 0 ? (
-          <>
-            <p>These websites go back to manual scanning, and their schedules are not kept:</p>
-            <ul className="list-disc pl-4">
-              {losing.map((site) => (
-                <li key={site.id}>{site.name}</li>
-              ))}
-            </ul>
-          </>
-        ) : (
-          <p>No scheduled scans change.</p>
-        )}
-      </div>
-      <div className="flex gap-2">
-        <Button type="button" size="sm" disabled={pending} onClick={onConfirm}>
-          Confirm switch
-        </Button>
-        <Button type="button" size="sm" variant="ghost" disabled={pending} onClick={onCancel}>
-          Cancel
-        </Button>
-      </div>
-    </div>
-  );
+function isPurchasable(plan: OrganizationPlan): plan is PurchasablePlan {
+  return (PURCHASABLE_PLANS as readonly OrganizationPlan[]).includes(plan);
 }
 
-/** The plan catalog with the current plan marked; switching asks to confirm what it resets. */
+/**
+ * The plan catalog with the current plan marked. Subscribing sends the owner to Stripe Checkout,
+ * so a card only offers that for a purchasable plan that is not already current. Once a
+ * subscription exists, the Portal is the only way to change or cancel it, so no card offers a
+ * button at all — the page shows one "Manage billing" button instead.
+ */
 export function PlanCards({
   current,
   plans,
   usage,
-  websites = [],
-  onSelect,
+  hasSubscription,
+  onSubscribe,
   pending,
 }: {
   current: OrganizationPlan;
   plans: Record<OrganizationPlan, PlanLimits>;
   usage: { websites: number; aiExplanationsThisMonth: number };
-  websites?: WebsiteSummary[];
-  onSelect: (plan: OrganizationPlan) => void;
+  hasSubscription: boolean;
+  onSubscribe: (plan: PurchasablePlan) => void;
   pending: boolean;
 }) {
-  const [confirming, setConfirming] = useState<OrganizationPlan | null>(null);
-
   return (
     <div className="grid gap-4 md:grid-cols-3">
       {ORGANIZATION_PLANS.map((plan) => {
         const limits = plans[plan];
         const isCurrent = plan === current;
-        const { frequencyDowngrades } = evaluatePlanChange({ plan, websites });
-        const losing = websites.filter((website) => frequencyDowngrades.includes(website.id));
 
         return (
           <section
@@ -158,31 +88,16 @@ export function PlanCards({
                   limit={limits.aiExplanationsPerMonth}
                 />
               </div>
-            ) : (
-              <div className="flex flex-col gap-2">
-                {confirming === plan ? (
-                  <ConfirmSwitch
-                    plan={plan}
-                    losing={losing}
-                    pending={pending}
-                    onConfirm={() => {
-                      setConfirming(null);
-                      onSelect(plan);
-                    }}
-                    onCancel={() => setConfirming(null)}
-                  />
-                ) : (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={pending}
-                    onClick={() => setConfirming(plan)}
-                  >
-                    Switch to {PLAN_NAMES[plan]}
-                  </Button>
-                )}
-              </div>
-            )}
+            ) : !hasSubscription && isPurchasable(plan) ? (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={pending}
+                onClick={() => onSubscribe(plan)}
+              >
+                Subscribe to {PLAN_NAMES[plan]}
+              </Button>
+            ) : null}
           </section>
         );
       })}

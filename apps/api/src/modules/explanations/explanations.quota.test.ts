@@ -6,6 +6,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { BillingRepository } from '../billing/billing.repository';
 import { BillingService } from '../billing/billing.service';
+import { SubscriptionsRepository } from '../billing/subscriptions.repository';
 import { ExplanationsRepository } from './explanations.repository';
 import { ExplanationsService } from './explanations.service';
 
@@ -64,7 +65,10 @@ function wire(audit: { id: string; status: 'completed' }) {
     { findAuditOrThrow: vi.fn().mockResolvedValue(audit) } as never,
     { enqueue } as never,
     { AI_EXPLANATIONS_ENABLED: true },
-    new BillingService(new BillingRepository(prismaService)),
+    new BillingService(
+      new BillingRepository(prismaService),
+      new SubscriptionsRepository(prismaService),
+    ),
   );
   return { service, enqueue };
 }

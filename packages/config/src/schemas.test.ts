@@ -122,3 +122,43 @@ describe('AI settings', () => {
     expect(worker.ANTHROPIC_API_KEY).toBeUndefined();
   });
 });
+
+describe('stripe configuration', () => {
+  it('defaults to the fake provider with no keys', () => {
+    const env = loadEnv(apiEnvSchema, validApi);
+
+    expect(env.STRIPE_PROVIDER).toBe('fake');
+  });
+
+  it('gives the fake provider working price ids so offline checkout runs', () => {
+    const env = loadEnv(apiEnvSchema, validApi);
+
+    expect(env.STRIPE_PRICE_PRO).toBe('price_fake_pro');
+    expect(env.STRIPE_PRICE_AGENCY).toBe('price_fake_agency');
+  });
+
+  it('keeps real price ids when they are provided', () => {
+    const env = loadEnv(apiEnvSchema, { ...validApi, STRIPE_PRICE_PRO: 'price_real' });
+
+    expect(env.STRIPE_PRICE_PRO).toBe('price_real');
+  });
+
+  it('requires the key, webhook secret and both prices when the provider is stripe', () => {
+    expect(() => loadEnv(apiEnvSchema, { ...validApi, STRIPE_PROVIDER: 'stripe' })).toThrow(
+      /STRIPE_SECRET_KEY/,
+    );
+  });
+
+  it('accepts a fully configured stripe provider', () => {
+    const env = loadEnv(apiEnvSchema, {
+      ...validApi,
+      STRIPE_PROVIDER: 'stripe',
+      STRIPE_SECRET_KEY: 'sk_test_x',
+      STRIPE_WEBHOOK_SECRET: 'whsec_x',
+      STRIPE_PRICE_PRO: 'price_pro',
+      STRIPE_PRICE_AGENCY: 'price_agency',
+    });
+
+    expect(env.STRIPE_PRICE_PRO).toBe('price_pro');
+  });
+});

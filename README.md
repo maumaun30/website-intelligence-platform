@@ -31,12 +31,32 @@ Every organization is on one of three plans, `free` by default:
 | pro    | 10       | 1000           | manual, daily, weekly | 100                     |
 | agency | 50       | 10000          | manual, daily, weekly | 500                     |
 
-`GET /api/v1/billing` returns the current plan, its limits, and usage; `POST /api/v1/billing/plan`
-(owner only) switches plans directly — there is no payment step yet, and no Stripe integration
-(planned for slice 9). Switching to a plan with a lower website limit does not delete or lock any
-existing website: all of them are grandfathered. If a website's schedule (`daily`/`weekly`) is no
-longer allowed on the new plan, it is reset to `manual` with its next scheduled run cleared, and
-the affected websites are reported back in the response.
+Plans are bought and managed through Stripe. `GET /api/v1/billing` returns the current plan, its
+limits, usage, and subscription state. An owner starts a subscription with
+`POST /api/v1/billing/checkout`, which returns a Stripe Checkout URL, and manages everything
+afterwards — card, invoices, plan changes, cancellation — through the Stripe Billing Portal via
+`POST /api/v1/billing/portal`.
+
+**Stripe webhooks are the only thing that changes a plan** (`POST /api/v1/billing/webhook`; the
+signature is its authentication, and repeated deliveries of the same event are ignored). The app
+never moves an organization between plans on its own, so what the customer pays for and what they
+get cannot drift apart. A failed payment marks the subscription `past_due` and shows a banner, but
+keeps the plan until Stripe actually ends the subscription.
+
+Moving to a plan with a lower website limit does not delete or lock any existing website: all of
+them are grandfathered. If a website's schedule (`daily`/`weekly`) is no longer allowed on the new
+plan, it is reset to `manual` with its next scheduled run cleared.
+
+Configure Stripe with five variables; `STRIPE_PROVIDER=fake` (the default) runs the whole flow
+offline with deterministic URLs and no network, which is what local development and CI use:
+
+| Variable                | Purpose                                                |
+| ----------------------- | ------------------------------------------------------ |
+| `STRIPE_PROVIDER`       | `fake` (default, offline) or `stripe` (live calls)     |
+| `STRIPE_SECRET_KEY`     | Stripe API key; required when the provider is `stripe` |
+| `STRIPE_WEBHOOK_SECRET` | Signing secret for the webhook endpoint                |
+| `STRIPE_PRICE_PRO`      | Price id for the Pro plan                              |
+| `STRIPE_PRICE_AGENCY`   | Price id for the Agency plan                           |
 
 ## Requirements
 

@@ -5,12 +5,12 @@ import {
   type OrganizationPlan,
   type QuotaDecision,
   type ScanFrequency,
-  evaluatePlanChange,
   evaluateQuota,
   utcMonthKey,
 } from '@wintel/types';
 
 import { BillingRepository } from './billing.repository';
+import { SubscriptionsRepository } from './subscriptions.repository';
 
 const REFUSAL_MESSAGES = {
   PLAN_WEBSITE_LIMIT: 'Your plan does not allow any more websites',
@@ -25,17 +25,21 @@ const REFUSAL_MESSAGES = {
  */
 @Injectable()
 export class BillingService {
-  constructor(private readonly repo: BillingRepository) {}
+  constructor(
+    private readonly repo: BillingRepository,
+    private readonly subscriptions: SubscriptionsRepository,
+  ) {}
 
   planFor(organizationId: string): Promise<OrganizationPlan> {
     return this.repo.plan(organizationId);
   }
 
   async state(organizationId: string, now: Date = new Date()): Promise<BillingState> {
-    const [plan, websites, aiExplanationsThisMonth] = await Promise.all([
+    const [plan, websites, aiExplanationsThisMonth, subscription] = await Promise.all([
       this.repo.plan(organizationId),
       this.repo.countWebsites(organizationId),
       this.repo.aiUsage(organizationId, utcMonthKey(now)),
+      this.subscriptions.find(organizationId),
     ]);
 
     return {
@@ -43,33 +47,14 @@ export class BillingService {
       limits: PLAN_LIMITS[plan],
       usage: { websites, aiExplanationsThisMonth },
       plans: PLAN_LIMITS,
+      subscription: subscription
+        ? {
+            status: subscription.status,
+            currentPeriodEnd: subscription.currentPeriodEnd?.toISOString() ?? null,
+            cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+          }
+        : null,
     };
-  }
-
-  async changePlan(
-    organizationId: string,
-    plan: OrganizationPlan,
-    now: Date = new Date(),
-  ): Promise<BillingState & { downgradedWebsites: string[] }> {
-    const { frequencyDowngrades } = evaluatePlanChange({
-      plan,
-      websites: await this.repo.listWebsiteFrequencies(organizationId),
-    });
-
-    await this.repo.applyPlanChange(organizationId, plan, frequencyDowngrades);
-
-    return {
-      ...(await this.state(organizationId, now)),
-      downgradedWebsites: frequencyDowngrades,
-    };
-  }
-
-  async assertWebsiteQuota(organizationId: string): Promise<void> {
-    const [plan, current] = await Promise.all([
-      this.repo.plan(organizationId),
-      this.repo.countWebsites(organizationId),
-    ]);
-    this.enforce(evaluateQuota({ plan, kind: 'websites', current }));
   }
 
   async assertScanFrequency(organizationId: string, scanFrequency: ScanFrequency): Promise<void> {

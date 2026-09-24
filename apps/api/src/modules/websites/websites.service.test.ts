@@ -30,6 +30,7 @@ function makeRepo() {
     listByOrg: vi.fn(),
     findInOrg: vi.fn(),
     create: vi.fn(),
+    createWithinQuota: vi.fn(),
     update: vi.fn(),
     remove: vi.fn(),
     setVerificationPending: vi.fn(),
@@ -51,16 +52,16 @@ describe('WebsitesService', () => {
     service = new WebsitesService(
       repo as never,
       queue as never,
-      { assertWebsiteQuota: vi.fn(), assertScanFrequency: vi.fn() } as never,
+      { planFor: vi.fn().mockResolvedValue('pro'), assertScanFrequency: vi.fn() } as never,
     );
   });
 
   it('normalizes and issues a token on create', async () => {
-    repo.create.mockResolvedValue(sampleRow);
+    repo.createWithinQuota.mockResolvedValue({ website: sampleRow });
 
     await service.create('org1', 'user1', { name: 'Acme', url: 'https://ACME.test/' });
 
-    const arg = repo.create.mock.calls[0]![0];
+    const arg = repo.createWithinQuota.mock.calls[0]![0];
     expect(arg.url).toBe('https://acme.test');
     expect(arg.domain).toBe('acme.test');
     expect(typeof arg.verificationToken).toBe('string');
@@ -68,7 +69,7 @@ describe('WebsitesService', () => {
   });
 
   it('maps a duplicate-domain violation to a 409', async () => {
-    repo.create.mockRejectedValue(
+    repo.createWithinQuota.mockRejectedValue(
       new Prisma.PrismaClientKnownRequestError('dup', { code: 'P2002', clientVersion: 'x' }),
     );
 
@@ -163,27 +164,38 @@ describe('WebsitesService', () => {
   });
 
   describe('WebsitesService quota enforcement', () => {
-    it('checks the website quota before creating', async () => {
+    it('refuses a create the plan has no room for, without inserting', async () => {
       const billing = {
-        assertWebsiteQuota: vi.fn().mockRejectedValue(new ForbiddenException()),
+        planFor: vi.fn().mockResolvedValue('free'),
         assertScanFrequency: vi.fn(),
       };
-      const repo = { create: vi.fn() };
+      const repo = {
+        createWithinQuota: vi
+          .fn()
+          .mockResolvedValue({ refusedWith: 'PLAN_WEBSITE_LIMIT', limit: 1, current: 1 }),
+      };
       const service = new WebsitesService(
         repo as never,
         { enqueue: vi.fn() } as never,
         billing as never,
       );
 
-      await expect(
-        service.create('o1', 'u1', { name: 'Site', url: 'https://example.com' }),
-      ).rejects.toBeInstanceOf(ForbiddenException);
-      expect(repo.create).not.toHaveBeenCalled();
+      const error = await service
+        .create('o1', 'u1', { name: 'Site', url: 'https://example.com' })
+        .catch((caught: unknown) => caught);
+
+      expect(error).toBeInstanceOf(ForbiddenException);
+      expect((error as ForbiddenException).getResponse()).toMatchObject({
+        details: { code: 'PLAN_WEBSITE_LIMIT', limit: 1, current: 1 },
+      });
+      expect(repo.createWithinQuota).toHaveBeenCalledWith(
+        expect.objectContaining({ organizationId: 'o1', limit: 1 }),
+      );
     });
 
     it('checks the frequency quota before updating the schedule', async () => {
       const billing = {
-        assertWebsiteQuota: vi.fn(),
+        planFor: vi.fn().mockResolvedValue('pro'),
         assertScanFrequency: vi.fn().mockRejectedValue(new ForbiddenException()),
       };
       const repo = {
@@ -205,7 +217,7 @@ describe('WebsitesService', () => {
 
     it('re-saving an unchanged disallowed frequency succeeds without checking the quota', async () => {
       const billing = {
-        assertWebsiteQuota: vi.fn(),
+        planFor: vi.fn().mockResolvedValue('pro'),
         assertScanFrequency: vi.fn().mockRejectedValue(new ForbiddenException()),
       };
       const repo = {

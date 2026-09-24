@@ -125,25 +125,33 @@ export type { ActiveScanSnapshot, ScanStartDecision, ScanStartRefusal } from './
 export {
   ORGANIZATION_PLANS,
   PLAN_LIMITS,
-  billingStateSchema,
-  changePlanInputSchema,
+  billingPlanStateSchema,
   effectivePageCap,
   evaluatePlanChange,
   evaluateQuota,
-  planChangeResultSchema,
   planLimitsSchema,
   startOfUtcMonth,
   utcMonthKey,
 } from './billing';
+export type { OrganizationPlan, PlanLimits, QuotaDecision, QuotaQuery } from './billing';
+export {
+  PURCHASABLE_PLANS,
+  LIVE_SUBSCRIPTION_STATUSES,
+  SUBSCRIPTION_STATUSES,
+  billingRedirectSchema,
+  billingStateSchema,
+  createCheckoutInputSchema,
+  isLiveSubscription,
+  subscriptionSummarySchema,
+} from './stripe';
 export type {
+  BillingRedirect,
   BillingState,
-  ChangePlanInput,
-  OrganizationPlan,
-  PlanChangeResult,
-  PlanLimits,
-  QuotaDecision,
-  QuotaQuery,
-} from './billing';
+  CreateCheckoutInput,
+  PurchasablePlan,
+  SubscriptionStatus,
+  SubscriptionSummary,
+} from './stripe';
 export {
   HEALTH_SCORE_WEIGHTS,
   ISSUE_CHANGE_KINDS,
