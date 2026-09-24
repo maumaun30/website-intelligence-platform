@@ -1,11 +1,17 @@
 import { randomUUID } from 'node:crypto';
 
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@wintel/database';
 import {
   type CreateWebsiteInput,
   type UpdateWebsiteInput,
   type VerificationMethod,
+  PLAN_LIMITS,
   computeNextScanAt,
 } from '@wintel/types';
 
@@ -39,17 +45,28 @@ export class WebsitesService {
   }
 
   async create(organizationId: string, createdById: string, input: CreateWebsiteInput) {
-    await this.billing.assertWebsiteQuota(organizationId);
+    const plan = await this.billing.planFor(organizationId);
     const { url, domain } = normalizeWebsiteUrl(input.url);
     try {
-      return await this.repo.create({
+      // The count and the insert share one lock, so two concurrent creates cannot both take the
+      // last slot the plan allows.
+      const result = await this.repo.createWithinQuota({
         organizationId,
         createdById,
         name: input.name,
         url,
         domain,
         verificationToken: randomUUID(),
+        limit: PLAN_LIMITS[plan].websites,
       });
+
+      if ('refusedWith' in result) {
+        throw new ForbiddenException({
+          message: 'Your plan does not allow any more websites',
+          details: { code: result.refusedWith, limit: result.limit, current: result.current },
+        });
+      }
+      return result.website;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         throw new ConflictException(

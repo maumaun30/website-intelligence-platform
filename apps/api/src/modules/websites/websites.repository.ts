@@ -36,6 +36,25 @@ export class WebsitesRepository {
     return this.prisma.client.website.findFirst({ where: { id, organizationId } });
   }
 
+  /**
+   * Counts and inserts under one lock on the organization row, so two concurrent creates cannot
+   * both see the last free slot. A plan limit is worth money now, so check-then-act is not enough.
+   */
+  async createWithinQuota(input: CreateWebsiteData & { limit: number }) {
+    const { limit, ...data } = input;
+
+    return this.prisma.client.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM organization WHERE id = ${data.organizationId} FOR UPDATE`;
+
+      const current = await tx.website.count({ where: { organizationId: data.organizationId } });
+      if (current >= limit) {
+        return { refusedWith: 'PLAN_WEBSITE_LIMIT' as const, limit, current };
+      }
+
+      return { website: await tx.website.create({ data }) };
+    });
+  }
+
   create(data: CreateWebsiteData) {
     return this.prisma.client.website.create({ data });
   }

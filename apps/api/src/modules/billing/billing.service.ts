@@ -57,14 +57,6 @@ export class BillingService {
     };
   }
 
-  async assertWebsiteQuota(organizationId: string): Promise<void> {
-    const [plan, current] = await Promise.all([
-      this.repo.plan(organizationId),
-      this.repo.countWebsites(organizationId),
-    ]);
-    this.enforce(evaluateQuota({ plan, kind: 'websites', current }));
-  }
-
   async assertScanFrequency(organizationId: string, scanFrequency: ScanFrequency): Promise<void> {
     const plan = await this.repo.plan(organizationId);
     this.enforce(evaluateQuota({ plan, kind: 'scanFrequency', scanFrequency }));

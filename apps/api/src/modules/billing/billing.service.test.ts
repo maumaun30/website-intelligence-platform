@@ -64,29 +64,6 @@ describe('BillingService.state', () => {
 });
 
 describe('BillingService quota assertions', () => {
-  it('refuses a website over the plan limit with the code and the numbers', async () => {
-    const dependencies = repo({
-      plan: vi.fn().mockResolvedValue('free'),
-      countWebsites: vi.fn().mockResolvedValue(1),
-    });
-    const service = new BillingService(dependencies as never, subscriptionsRepo() as never);
-
-    await expect(service.assertWebsiteQuota('o1')).rejects.toMatchObject({
-      response: {
-        details: { code: 'PLAN_WEBSITE_LIMIT', limit: 1, current: 1 },
-      },
-    });
-  });
-
-  it('allows a website under the plan limit', async () => {
-    const service = new BillingService(
-      repo({ countWebsites: vi.fn().mockResolvedValue(2) }) as never,
-      subscriptionsRepo() as never,
-    );
-
-    await expect(service.assertWebsiteQuota('o1')).resolves.toBeUndefined();
-  });
-
   it('refuses a scan frequency the plan does not include', async () => {
     const service = new BillingService(
       repo({ plan: vi.fn().mockResolvedValue('free') }) as never,
