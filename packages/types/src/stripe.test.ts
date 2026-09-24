@@ -4,6 +4,7 @@ import { PLAN_LIMITS } from './billing';
 import {
   PURCHASABLE_PLANS,
   billingStateSchema,
+  isLiveSubscription,
   createCheckoutInputSchema,
   subscriptionSummarySchema,
 } from './stripe';
@@ -74,5 +75,20 @@ describe('billingStateSchema', () => {
 
   it('requires the subscription field to be present', () => {
     expect(billingStateSchema.safeParse(planState).success).toBe(false);
+  });
+});
+
+describe('isLiveSubscription', () => {
+  it('counts only a subscription someone is actually paying for', () => {
+    expect(isLiveSubscription('active')).toBe(true);
+    expect(isLiveSubscription('trialing')).toBe(true);
+    expect(isLiveSubscription('past_due')).toBe(true);
+  });
+
+  it('rejects rows left behind by an abandoned checkout or a cancellation', () => {
+    expect(isLiveSubscription('incomplete')).toBe(false);
+    expect(isLiveSubscription('canceled')).toBe(false);
+    expect(isLiveSubscription(null)).toBe(false);
+    expect(isLiveSubscription(undefined)).toBe(false);
   });
 });

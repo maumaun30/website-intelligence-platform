@@ -4,10 +4,13 @@ import type { SubscriptionSummary } from '@wintel/types';
 import { Button } from '@wintel/ui';
 
 function formatDate(iso: string): string {
+  // Stripe's timestamps are UTC; rendering them in the viewer's zone shows a US customer their
+  // plan expiring a day early.
   return new Date(iso).toLocaleDateString('en-GB', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
+    timeZone: 'UTC',
   });
 }
 
@@ -24,7 +27,9 @@ export function SubscriptionBanner({
   onManage: () => void;
   pending: boolean;
 }) {
-  const needsPayment = subscription.status === 'past_due' || subscription.status === 'incomplete';
+  // `incomplete` means a checkout was started and never paid — there is no payment to have
+  // failed, and no plan to lose.
+  const needsPayment = subscription.status === 'past_due';
 
   if (needsPayment) {
     return (

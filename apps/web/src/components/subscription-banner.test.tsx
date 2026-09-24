@@ -45,3 +45,17 @@ describe('SubscriptionBanner', () => {
     expect(screen.getByRole('status')).toHaveTextContent(/12 March 2026/);
   });
 });
+
+describe('SubscriptionBanner after an abandoned checkout', () => {
+  it('does not claim a payment failed when checkout was never completed', () => {
+    render(
+      <SubscriptionBanner
+        subscription={{ status: 'incomplete', currentPeriodEnd: null, cancelAtPeriodEnd: false }}
+        onManage={vi.fn()}
+        pending={false}
+      />,
+    );
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+});

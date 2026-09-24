@@ -1,40 +1,17 @@
 'use client';
 
-import type { PurchasablePlan } from '@wintel/types';
+import { type PurchasablePlan, isLiveSubscription } from '@wintel/types';
 import { Button } from '@wintel/ui';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { PlanCards } from '@/components/plan-cards';
 import { SubscriptionBanner } from '@/components/subscription-banner';
-import type { ApiError } from '@/lib/api-client';
-import { BillingRequestError } from '@/lib/billing-client';
+import { refusalMessage } from '@/lib/billing-messages';
 import { useBilling, useOpenPortal, useStartCheckout } from '@/lib/use-billing';
 
 const POLL_INTERVAL_MS = 2000;
 const POLL_TIMEOUT_MS = 30000;
-
-function refusalMessage(error: ApiError | null | undefined): string | null {
-  if (!error) {
-    return null;
-  }
-  if (error.status === 403) {
-    return 'Only an owner can manage billing.';
-  }
-  if (error instanceof BillingRequestError) {
-    switch (error.code) {
-      case 'SUBSCRIPTION_EXISTS':
-        return 'You already have a subscription. Use Manage billing to change it.';
-      case 'NO_SUBSCRIPTION':
-        return 'You do not have a billing account yet.';
-      case 'STRIPE_UNAVAILABLE':
-        return 'Could not reach Stripe. Try again in a moment.';
-      default:
-        break;
-    }
-  }
-  return 'Something went wrong. Try again.';
-}
 
 export default function BillingPage() {
   const billing = useBilling();
@@ -79,7 +56,7 @@ export default function BillingPage() {
     // Only the arrival of ?checkout=success and the first successful load should (re)start the
     // poll; `billing.refetch`/`billing.data` are read fresh on each tick via the closure, not
     // through this dependency array, so including them would restart the interval every render.
-  }, [searchParams, billing.isPending]);
+  }, [searchParams, billing.isPending, billing.isSuccess]);
 
   const onSubscribe = (plan: PurchasablePlan) => {
     startCheckout.mutate(plan);
@@ -91,7 +68,9 @@ export default function BillingPage() {
 
   const checkoutErrorMessage = refusalMessage(startCheckout.error);
   const portalErrorMessage = refusalMessage(openPortal.error);
-  const hasSubscription = Boolean(billing.data?.subscription);
+  // An abandoned checkout and a cancellation both leave a Subscription row behind. Offering to
+  // subscribe must depend on whether one is live, or those users can never subscribe again.
+  const hasSubscription = isLiveSubscription(billing.data?.subscription?.status);
 
   return (
     <div className="flex flex-col gap-8">
@@ -105,6 +84,12 @@ export default function BillingPage() {
       {activating ? (
         <p role="status" className="text-sm text-muted-foreground">
           Activating your subscription…
+        </p>
+      ) : null}
+
+      {searchParams.get('checkout') === 'cancelled' ? (
+        <p role="status" className="text-sm text-muted-foreground">
+          Checkout cancelled — nothing was charged. Pick a plan below whenever you are ready.
         </p>
       ) : null}
 

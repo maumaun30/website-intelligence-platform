@@ -136,10 +136,12 @@ export {
 export type { OrganizationPlan, PlanLimits, QuotaDecision, QuotaQuery } from './billing';
 export {
   PURCHASABLE_PLANS,
+  LIVE_SUBSCRIPTION_STATUSES,
   SUBSCRIPTION_STATUSES,
   billingRedirectSchema,
   billingStateSchema,
   createCheckoutInputSchema,
+  isLiveSubscription,
   subscriptionSummarySchema,
 } from './stripe';
 export type {

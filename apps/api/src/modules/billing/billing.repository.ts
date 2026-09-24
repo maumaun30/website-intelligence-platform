@@ -3,7 +3,7 @@ import type { OrganizationPlan, ScanFrequency } from '@wintel/types';
 
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 
-/** Plan reads, usage counts, and the one write that changes a plan. Always organization-scoped. */
+/** Plan reads and usage counts. Plans themselves are written only by Stripe webhooks. */
 @Injectable()
 export class BillingRepository {
   constructor(private readonly prisma: PrismaService) {}

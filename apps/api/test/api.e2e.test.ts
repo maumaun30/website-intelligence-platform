@@ -370,6 +370,7 @@ describe('billing', () => {
 describe('billing enforcement', () => {
   let prisma: PrismaClient;
   let cookie: string;
+  let organizationId: string;
   const origin = process.env.BETTER_AUTH_URL ?? 'http://localhost:4000';
 
   beforeAll(async () => {
@@ -390,6 +391,9 @@ describe('billing enforcement', () => {
       .send({ email, password })
       .expect(200);
     cookie = ([] as string[]).concat(signIn.headers['set-cookie'] ?? []).join('; ');
+
+    const me = await request(app.getHttpServer()).get('/api/v1/me').set('Cookie', cookie);
+    organizationId = me.body.activeOrganizationId;
   });
 
   afterAll(async () => {
@@ -421,6 +425,50 @@ describe('billing enforcement', () => {
       .send({ plan: 'pro' });
 
     expect(response.status).toBe(404);
+  });
+
+  it('rejects checkout by an admin (not owner) with 403', async () => {
+    const adminEmail = `billing-e2e-admin-${randomUUID()}@example.test`;
+    const adminPassword = 'billing-e2e-admin-pass-1234';
+
+    await request(app.getHttpServer())
+      .post('/api/v1/auth/sign-up/email')
+      .set('Origin', origin)
+      .send({ email: adminEmail, password: adminPassword, name: 'Billing Admin' })
+      .expect(200);
+    const adminUser = await prisma.user.findUniqueOrThrow({ where: { email: adminEmail } });
+    await prisma.user.update({ where: { id: adminUser.id }, data: { emailVerified: true } });
+
+    // Sign-up already gave this user a personal organization they own. Back-date an admin
+    // membership of the target org so it is the oldest membership and the first session (created
+    // on sign-in, below) picks it as active — see create-auth.ts's session.create hook.
+    await prisma.member.create({
+      data: {
+        id: randomUUID(),
+        organizationId,
+        userId: adminUser.id,
+        role: 'admin',
+        createdAt: new Date(0),
+      },
+    });
+
+    const adminSignIn = await request(app.getHttpServer())
+      .post('/api/v1/auth/sign-in/email')
+      .set('Origin', origin)
+      .send({ email: adminEmail, password: adminPassword })
+      .expect(200);
+    const adminCookie = ([] as string[]).concat(adminSignIn.headers['set-cookie'] ?? []).join('; ');
+
+    const me = await request(app.getHttpServer()).get('/api/v1/me').set('Cookie', adminCookie);
+    expect(me.body.activeOrganizationId).toBe(organizationId);
+    expect(me.body.role).toBe('admin');
+
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/billing/checkout')
+      .set('Cookie', adminCookie)
+      .send({ plan: 'pro' });
+
+    expect(response.status).toBe(403);
   });
 
   it('refuses a portal session when the organization has never subscribed', async () => {

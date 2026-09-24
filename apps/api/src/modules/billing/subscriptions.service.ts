@@ -1,14 +1,11 @@
 import { BadGatewayException, ConflictException, Inject, Injectable } from '@nestjs/common';
 import type { ApiEnv } from '@wintel/config';
-import type { PurchasablePlan } from '@wintel/types';
+import { type PurchasablePlan, isLiveSubscription } from '@wintel/types';
 
 import { API_ENV } from '../../config/api-config.module';
 import { STRIPE_CLIENT, type StripeClient } from './stripe/stripe-client';
 import { priceIdForPlan } from './stripe/stripe-prices';
 import { SubscriptionsRepository } from './subscriptions.repository';
-
-/** Statuses that mean "already paying"; changing plan is then the Portal's job, not checkout's. */
-const LIVE_STATUSES = ['active', 'trialing', 'past_due'] as const;
 
 /**
  * Creates the hosted Stripe sessions. It never writes a plan: only webhooks do that, so an
@@ -29,10 +26,8 @@ export class SubscriptionsService {
   ): Promise<{ url: string }> {
     const existing = await this.repo.find(organizationId);
 
-    if (
-      existing?.stripeSubscriptionId &&
-      (LIVE_STATUSES as readonly string[]).includes(existing.status)
-    ) {
+    // "Already paying" is the Portal's business; an abandoned or cancelled row is not.
+    if (existing?.stripeSubscriptionId && isLiveSubscription(existing.status)) {
       throw new ConflictException({
         message: 'This organization already has a subscription; manage it in the billing portal',
         details: { code: 'SUBSCRIPTION_EXISTS' },
