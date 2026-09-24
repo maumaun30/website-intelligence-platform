@@ -72,6 +72,17 @@ export const stripeApiEnvSchema = z
     STRIPE_PRICE_PRO: z.string().min(1).optional(),
     STRIPE_PRICE_AGENCY: z.string().min(1).optional(),
   })
+  .transform((env) =>
+    // The offline provider still needs price ids to map plans; real deployments always set their
+    // own, and `stripe` refuses to boot without them below.
+    env.STRIPE_PROVIDER === 'fake'
+      ? {
+          ...env,
+          STRIPE_PRICE_PRO: env.STRIPE_PRICE_PRO ?? 'price_fake_pro',
+          STRIPE_PRICE_AGENCY: env.STRIPE_PRICE_AGENCY ?? 'price_fake_agency',
+        }
+      : env,
+  )
   .superRefine((env, ctx) => {
     if (env.STRIPE_PROVIDER !== 'stripe') {
       return;

@@ -39,6 +39,10 @@ export class SubscriptionsService {
       });
     }
 
+    // Resolved before any Stripe call: a missing price is our misconfiguration, and reporting it
+    // as "could not reach Stripe" would send someone hunting an outage that never happened.
+    const priceId = priceIdForPlan(this.env, plan);
+
     const customerId =
       existing?.stripeCustomerId ??
       (await this.call(() => this.stripe.createCustomer({ organizationId, email })));
@@ -50,7 +54,7 @@ export class SubscriptionsService {
     const url = await this.call(() =>
       this.stripe.createCheckoutSession({
         customerId,
-        priceId: priceIdForPlan(this.env, plan),
+        priceId,
         organizationId,
         successUrl: `${this.env.APP_URL}/dashboard/billing?checkout=success`,
         cancelUrl: `${this.env.APP_URL}/dashboard/billing?checkout=cancelled`,

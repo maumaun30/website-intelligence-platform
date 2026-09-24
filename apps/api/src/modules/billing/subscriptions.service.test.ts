@@ -85,3 +85,20 @@ describe('SubscriptionsService.portal', () => {
     });
   });
 });
+
+describe('SubscriptionsService configuration errors', () => {
+  it('does not disguise a missing price id as a Stripe outage', async () => {
+    const service = new SubscriptionsService(
+      { find: vi.fn().mockResolvedValue(null), upsertCustomer: vi.fn() } as never,
+      new FakeStripeClient(),
+      { STRIPE_PRICE_PRO: undefined, APP_URL: 'http://localhost:3000' } as never,
+    );
+
+    const error = await service
+      .checkout('o1', 'pro', 'owner@example.com')
+      .catch((caught: unknown) => caught);
+
+    expect((error as { status?: number }).status).not.toBe(502);
+    expect((error as Error).message).toMatch(/price/i);
+  });
+});
