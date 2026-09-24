@@ -262,3 +262,53 @@ describe('StripeEventsService.applyEvent', () => {
     expect('stripeSubscriptionId' in written).toBe(false);
   });
 });
+
+// Stripe's 2026-08-26 API moved `current_period_end` off the subscription and onto each item.
+// Verified live: a real `customer.subscription.created` carries no top-level field at all.
+describe('StripeEventsService period end', () => {
+  it('reads the period end from the subscription items when the top level has none', async () => {
+    const { service, applyStripeState } = make();
+    const event = subscriptionEvent('customer.subscription.updated', {
+      current_period_end: undefined,
+      items: { data: [{ price: { id: 'price_pro' }, current_period_end: 1_792_804_461 }] },
+    });
+
+    await service.applyEvent(event as never);
+
+    expect(applyStripeState).toHaveBeenCalledWith(
+      expect.objectContaining({ currentPeriodEnd: new Date(1_792_804_461 * 1000) }),
+    );
+  });
+
+  it('prefers the top-level field when an older API version still sends it', async () => {
+    const { service, applyStripeState } = make();
+    const event = subscriptionEvent('customer.subscription.updated', {
+      items: { data: [{ price: { id: 'price_pro' }, current_period_end: 1_792_804_461 }] },
+    });
+
+    await service.applyEvent(event as never);
+
+    expect(applyStripeState).toHaveBeenCalledWith(
+      expect.objectContaining({ currentPeriodEnd: new Date(1_760_000_000 * 1000) }),
+    );
+  });
+
+  it('takes the furthest item period end when items disagree', async () => {
+    const { service, applyStripeState } = make();
+    const event = subscriptionEvent('customer.subscription.updated', {
+      current_period_end: undefined,
+      items: {
+        data: [
+          { price: { id: 'price_pro' }, current_period_end: 1_700_000_000 },
+          { price: { id: 'price_pro' }, current_period_end: 1_792_804_461 },
+        ],
+      },
+    });
+
+    await service.applyEvent(event as never);
+
+    expect(applyStripeState).toHaveBeenCalledWith(
+      expect.objectContaining({ currentPeriodEnd: new Date(1_792_804_461 * 1000) }),
+    );
+  });
+});

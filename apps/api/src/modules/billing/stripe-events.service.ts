@@ -206,9 +206,24 @@ export class StripeEventsService {
     return undefined;
   }
 
+  /**
+   * Stripe's 2026-08-26 API moved `current_period_end` off the subscription and onto each item,
+   * so the top level is absent on current accounts. Read it where it is: the top level when an
+   * older version still sends it, otherwise the furthest item — that is when the customer next
+   * pays, and a multi-item subscription bills on the longest cycle it contains.
+   */
   private periodEnd(object: Record<string, unknown>): Date | undefined {
     const value = object['current_period_end'];
-    return typeof value === 'number' ? new Date(value * 1000) : undefined;
+    if (typeof value === 'number') {
+      return new Date(value * 1000);
+    }
+
+    const items = object['items'] as { data?: { current_period_end?: unknown }[] } | undefined;
+    const ends = (items?.data ?? [])
+      .map((item) => item.current_period_end)
+      .filter((end): end is number => typeof end === 'number');
+
+    return ends.length > 0 ? new Date(Math.max(...ends) * 1000) : undefined;
   }
 
   private cancelAtPeriodEndFor(object: Record<string, unknown>): boolean | undefined {
