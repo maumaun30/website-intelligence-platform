@@ -3,9 +3,12 @@ export interface SparklinePoint {
   value: number;
 }
 
-const WIDTH = 160;
-const HEIGHT = 40;
+const WIDTH = 240;
+const HEIGHT = 64;
 const PAD = 5;
+
+/** The score band boundaries, drawn as quiet guides so a line can be read against them. */
+const GUIDES = [90, 70];
 
 /**
  * A single-series trend on a fixed 0–100 scale, so a site's line is comparable over time. The line
@@ -24,15 +27,26 @@ export function Sparkline({ points, label }: { points: SparklinePoint[]; label: 
   const lastIndex = points.length - 1;
 
   return (
-    <figure className="flex flex-col">
+    <figure className="m-0 flex min-w-0 flex-1 flex-col gap-1.5">
       <svg
         role="img"
         aria-label={label}
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-        width={WIDTH}
-        height={HEIGHT}
-        className="overflow-visible"
+        preserveAspectRatio="none"
+        className="h-16 w-full"
       >
+        {GUIDES.map((guide) => (
+          <line
+            key={guide}
+            x1={0}
+            x2={WIDTH}
+            y1={y(guide)}
+            y2={y(guide)}
+            stroke="currentColor"
+            strokeDasharray="3 3"
+            className="text-border"
+          />
+        ))}
         {points.length > 1 ? (
           <polyline
             points={coordinates}
@@ -41,6 +55,7 @@ export function Sparkline({ points, label }: { points: SparklinePoint[]; label: 
             strokeWidth={2}
             strokeLinejoin="round"
             strokeLinecap="round"
+            vectorEffect="non-scaling-stroke"
             className="text-muted-foreground"
           />
         ) : null}
@@ -64,6 +79,10 @@ export function Sparkline({ points, label }: { points: SparklinePoint[]; label: 
           </g>
         ))}
       </svg>
+      <figcaption className="flex justify-between font-mono text-[11px] text-muted-foreground">
+        <span>{points[0]!.label}</span>
+        <span>{points[points.length - 1]!.label}</span>
+      </figcaption>
       <table className="sr-only">
         <caption>{label}</caption>
         <thead>

@@ -21,7 +21,12 @@ vi.mock('@/components/audit-section', () => ({ AuditSection: () => null }));
 
 import { ScanPanel } from './scan-panel';
 
-const website = { id: 'w1', name: 'Acme', verificationStatus: 'verified' } as Website;
+const website = {
+  id: 'w1',
+  name: 'Acme',
+  verificationStatus: 'verified',
+  maxPages: 500,
+} as Website;
 
 function scan(overrides: Partial<Scan>): Scan {
   return {
@@ -79,8 +84,10 @@ describe('ScanPanel', () => {
     render(<ScanPanel website={website} />);
 
     expect(screen.getByRole('button', { name: 'Scanning…' })).toBeDisabled();
-    expect(screen.getByText('running')).toBeInTheDocument();
-    expect(screen.getByText('7 pages crawled · 1 failed')).toBeInTheDocument();
+    expect(screen.getByText('Scan in progress')).toBeInTheDocument();
+    expect(screen.getByText('7')).toBeInTheDocument();
+    expect(screen.getByText('of up to 500 pages crawled · 1 failed')).toBeInTheDocument();
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '1');
   });
 
   it('explains why a completed scan stopped', () => {
@@ -88,7 +95,7 @@ describe('ScanPanel', () => {
 
     render(<ScanPanel website={website} />);
 
-    expect(screen.getByText('Stopped at the page limit.')).toBeInTheDocument();
+    expect(screen.getByText(/Stopped at the page limit\./)).toBeInTheDocument();
   });
 
   it('shows the error of a failed scan', () => {
@@ -106,6 +113,6 @@ describe('ScanPanel', () => {
 
     render(<ScanPanel website={website} />);
 
-    expect(screen.getByText('Scheduled')).toBeInTheDocument();
+    expect(screen.getByText(/scheduled/)).toBeInTheDocument();
   });
 });

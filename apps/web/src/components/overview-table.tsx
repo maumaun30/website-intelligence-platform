@@ -55,13 +55,33 @@ function Critical({ count }: { count: number | null }) {
 export function OverviewTable({ rows }: { rows: OverviewRow[] }) {
   if (rows.length === 0) {
     return (
-      <div className="rounded-lg border border-border bg-card p-6">
-        <p className="text-sm text-muted-foreground">
-          No websites yet.{' '}
-          <Link href="/dashboard/websites" className="font-medium text-primary hover:underline">
-            Add your first website
-          </Link>
+      <div className="flex min-h-72 flex-col items-center justify-center gap-3 rounded-lg border border-border bg-card px-8 py-10 text-center">
+        <span
+          aria-hidden="true"
+          className="grid size-11 place-items-center rounded-lg bg-primary-soft text-primary-soft-foreground"
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 18 18"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.6}
+          >
+            <circle cx="9" cy="9" r="6.5" />
+            <path d="M2.5 9h13M9 2.5c2 2 2 11 0 13M9 2.5c-2 2-2 11 0 13" />
+          </svg>
+        </span>
+        <h3 className="text-[17px] font-semibold">No websites yet</h3>
+        <p className="max-w-75 text-sm leading-relaxed text-muted-foreground">
+          We verify that you own it, crawl it, and give it a health score within a few minutes.
         </p>
+        <Link
+          href="/dashboard/websites"
+          className="mt-1 inline-flex h-10 items-center rounded-md bg-primary px-4.5 text-sm font-semibold text-primary-foreground transition-colors ease-out hover:bg-primary/90"
+        >
+          Add your first website
+        </Link>
       </div>
     );
   }

@@ -4,8 +4,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { PlanCards } from './plan-cards';
 
-const usage = { websites: 3, aiExplanationsThisMonth: 12 };
-
 afterEach(cleanup);
 
 describe('PlanCards', () => {
@@ -14,7 +12,6 @@ describe('PlanCards', () => {
       <PlanCards
         current="pro"
         plans={PLAN_LIMITS}
-        usage={usage}
         hasSubscription={false}
         onSubscribe={vi.fn()}
         pending={false}
@@ -32,7 +29,6 @@ describe('PlanCards', () => {
       <PlanCards
         current="free"
         plans={PLAN_LIMITS}
-        usage={usage}
         hasSubscription={false}
         onSubscribe={onSubscribe}
         pending={false}
@@ -49,7 +45,6 @@ describe('PlanCards', () => {
       <PlanCards
         current="pro"
         plans={PLAN_LIMITS}
-        usage={usage}
         hasSubscription
         onSubscribe={vi.fn()}
         pending={false}
