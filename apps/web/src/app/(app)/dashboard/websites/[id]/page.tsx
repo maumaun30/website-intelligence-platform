@@ -64,7 +64,9 @@ export default function WebsiteDetailPage({ params }: { params: Promise<{ id: st
   const { id } = use(params);
   const { data, isPending, isError } = useWebsite(id);
   const scans = useScans(id);
-  const [tab, setTab] = useState<Tab>('audit');
+  // An unverified website has no audit to show, so it opens on the thing it needs.
+  const [chosenTab, setChosenTab] = useState<Tab | null>(null);
+  const tab = chosenTab ?? (data?.verificationStatus === 'verified' ? 'audit' : 'verification');
 
   if (isPending) {
     return <p className="text-sm text-muted-foreground">Loading…</p>;
@@ -91,7 +93,7 @@ export default function WebsiteDetailPage({ params }: { params: Promise<{ id: st
             type="button"
             role="tab"
             aria-selected={tab === option}
-            onClick={() => setTab(option)}
+            onClick={() => setChosenTab(option)}
             className={`-mb-px pb-3 text-sm transition-colors ease-out ${
               tab === option
                 ? 'border-b-2 border-primary font-semibold text-foreground'
