@@ -10,6 +10,7 @@ import { UsageBar } from '@/components/usage-bar';
 import { SIDEBAR_COOKIE } from '@/lib/sidebar';
 import { useBilling } from '@/lib/use-billing';
 import { useOverview } from '@/lib/use-insights';
+import { useWebsites } from '@/lib/use-websites';
 
 const PANEL_ICON = (
   <svg
@@ -111,6 +112,7 @@ export function AppSidebar({
   const pathname = usePathname();
   const billing = useBilling();
   const overview = useOverview();
+  const websites = useWebsites();
 
   const toggle = () => {
     const next = !collapsed;
@@ -119,6 +121,10 @@ export function AppSidebar({
   };
 
   const websiteCount = overview.data?.length;
+  // Survives dismissing the banner, so the signal never disappears entirely.
+  const needsVerification = (websites.data ?? []).some(
+    (website) => website.verificationStatus !== 'verified',
+  );
 
   return (
     <aside
@@ -182,12 +188,28 @@ export function AppSidebar({
                   : 'font-medium text-muted-foreground hover:bg-accent hover:text-foreground'
               }`}
             >
-              {item.icon}
+              <span className="relative flex-none">
+                {item.icon}
+                {item.href === '/dashboard/websites' && needsVerification ? (
+                  <span
+                    aria-hidden="true"
+                    className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-warning ring-2 ring-card"
+                  />
+                ) : null}
+              </span>
               {collapsed ? (
-                <span className="sr-only">{item.label}</span>
+                <span className="sr-only">
+                  {item.label}
+                  {item.href === '/dashboard/websites' && needsVerification
+                    ? ' — needs verification'
+                    : ''}
+                </span>
               ) : (
                 <>
                   <span className="flex-1">{item.label}</span>
+                  {item.href === '/dashboard/websites' && needsVerification ? (
+                    <span className="sr-only">needs verification</span>
+                  ) : null}
                   {item.href === '/dashboard/websites' && websiteCount !== undefined ? (
                     <span className="tnum font-mono text-xs text-muted-foreground">
                       {websiteCount}
