@@ -3,18 +3,25 @@ export function UsageBar({ label, used, limit }: { label: string; used: number; 
   const share = limit === 0 ? 1 : Math.min(used / limit, 1);
 
   return (
-    <div className="flex flex-col gap-1">
-      <div className="flex items-baseline justify-between text-sm">
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-baseline justify-between gap-2 text-xs font-medium">
         <span className="text-muted-foreground">{label}</span>
-        <span className="font-medium">
+        <span className="tnum font-mono text-muted-foreground">
           {used} / {limit}
         </span>
       </div>
-      <div className="h-1.5 w-full rounded-full bg-muted">
+      <div
+        role="meter"
+        aria-label={label}
+        aria-valuenow={used}
+        aria-valuemin={0}
+        aria-valuemax={limit}
+        className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
+      >
         <div
-          className={
-            share >= 1 ? 'h-1.5 rounded-full bg-destructive' : 'h-1.5 rounded-full bg-primary'
-          }
+          className={`h-full rounded-full transition-[width] duration-200 ease-out ${
+            share >= 1 ? 'bg-destructive' : 'bg-primary'
+          }`}
           style={{ width: `${Math.round(share * 100)}%` }}
         />
       </div>

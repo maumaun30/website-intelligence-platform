@@ -7,7 +7,11 @@ import { ScoreDelta } from '@/components/score-delta';
 import { Sparkline } from '@/components/sparkline';
 import { useTrend } from '@/lib/use-insights';
 
-const dateLabel = new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric' });
+const dateLabel = new Intl.DateTimeFormat('en', {
+  month: 'short',
+  day: 'numeric',
+  timeZone: 'UTC',
+});
 
 /** Stat tile: current health score, change since the previous audit, and the recent trend. */
 export function WebsiteScoreTile({ websiteId }: { websiteId: string }) {
@@ -37,8 +41,7 @@ export function WebsiteScoreTile({ websiteId }: { websiteId: string }) {
           <span className="text-sm text-muted-foreground">No audit yet</span>
         ) : (
           <div className="flex items-center gap-3">
-            <span className="text-3xl font-semibold">{latestScore ?? '—'}</span>
-            <ScoreBadge score={latestScore} />
+            <ScoreBadge score={latestScore} size="lg" />
             <ScoreDelta delta={delta} />
           </div>
         )}

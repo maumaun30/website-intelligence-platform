@@ -1,38 +1,25 @@
-import Link from 'next/link';
+import { cookies } from 'next/headers';
 import type { ReactNode } from 'react';
 
-import { SignOutButton } from '@/components/sign-out-button';
+import { AppBreadcrumbs } from '@/components/app-breadcrumbs';
+import { AppSidebar } from '@/components/app-sidebar';
+import { SIDEBAR_COOKIE } from '@/lib/sidebar';
 import { requireSession } from '@/lib/server-session';
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const { user } = await requireSession();
+  const cookieStore = await cookies();
+  const collapsed = cookieStore.get(SIDEBAR_COOKIE)?.value === 'collapsed';
 
   return (
-    <div className="flex min-h-dvh flex-col">
-      <header className="flex items-center justify-between border-b border-border px-6 py-4">
-        <nav className="flex items-center gap-6">
-          <Link href="/dashboard" className="text-sm font-semibold tracking-tight">
-            Website Intelligence
-          </Link>
-          <Link
-            href="/dashboard/websites"
-            className="text-sm text-muted-foreground hover:text-foreground"
-          >
-            Websites
-          </Link>
-          <Link
-            href="/dashboard/billing"
-            className="text-sm text-muted-foreground hover:text-foreground"
-          >
-            Plan
-          </Link>
-        </nav>
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-muted-foreground">{user.email}</span>
-          <SignOutButton />
-        </div>
-      </header>
-      <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-10">{children}</main>
+    <div className="flex min-h-dvh">
+      <AppSidebar user={user} initialCollapsed={collapsed} />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="flex h-14 flex-none items-center border-b border-border bg-card px-10">
+          <AppBreadcrumbs />
+        </header>
+        <main className="flex-1 px-10 py-9">{children}</main>
+      </div>
     </div>
   );
 }

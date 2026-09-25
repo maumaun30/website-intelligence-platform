@@ -1,17 +1,12 @@
 'use client';
 
-import { AUDIT_RULES, type AuditRuleId, type IssueSeverity } from '@wintel/types';
-import { Badge, Button } from '@wintel/ui';
+import { AUDIT_RULES, type AuditRuleId } from '@wintel/types';
+import { Button } from '@wintel/ui';
 import { useState } from 'react';
 
 import { AiExplanation } from '@/components/ai-explanation';
+import { SeverityTag } from '@/components/severity-tag';
 import { ISSUE_PAGE_SIZE, useRuleIssues } from '@/lib/use-audits';
-
-export const SEVERITY_VARIANT: Record<IssueSeverity, 'destructive' | 'default' | 'outline'> = {
-  critical: 'destructive',
-  warning: 'default',
-  notice: 'outline',
-};
 
 /** One rule's findings: a summary row that expands into the affected pages. */
 export function AuditRuleGroup({
@@ -37,7 +32,7 @@ export function AuditRuleGroup({
     >
       <summary className="flex cursor-pointer items-center justify-between gap-2 px-3 py-2 text-sm">
         <span className="flex items-center gap-2">
-          <Badge variant={SEVERITY_VARIANT[rule.severity]}>{rule.severity}</Badge>
+          <SeverityTag severity={rule.severity} />
           <span data-testid="audit-rule-title">{rule.title}</span>
         </span>
         <span className="text-xs text-muted-foreground">
