@@ -59,7 +59,10 @@ export function SignInForm() {
         />
       </div>
       {error === null ? null : (
-        <p role="alert" className="text-sm text-destructive">
+        <p
+          role="alert"
+          className="rounded-lg bg-destructive-soft px-3 py-2.5 text-[13px] leading-snug font-medium text-destructive-soft-foreground"
+        >
           {error}
         </p>
       )}
