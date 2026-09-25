@@ -17,7 +17,11 @@ describe('Sparkline', () => {
 
     const line = container.querySelector('polyline');
     expect(line?.getAttribute('points')?.trim().split(/\s+/)).toHaveLength(3);
-    expect(container.querySelectorAll('[data-latest="true"]')).toHaveLength(1);
+    const marker = container.querySelector<HTMLElement>('[data-latest="true"]');
+    // The marker is an HTML dot on top of the stretched SVG, so it must stay round.
+    expect(marker?.tagName).toBe('SPAN');
+    // The last point sits one pad in from the right edge: (240 - 4) / 240.
+    expect(marker?.style.left).toBe('98.33333333333333%');
     expect(screen.getByRole('img', { name: 'Health score' })).toBeInTheDocument();
   });
 
@@ -31,7 +35,7 @@ describe('Sparkline', () => {
   it('draws a lone marker for a single point and nothing for none', () => {
     const single = render(<Sparkline points={[points[0]!]} label="Health score" />);
     expect(single.container.querySelector('polyline')).toBeNull();
-    expect(single.container.querySelectorAll('circle[data-latest="true"]')).toHaveLength(1);
+    expect(single.container.querySelectorAll('[data-latest="true"]')).toHaveLength(1);
     single.unmount();
 
     const empty = render(<Sparkline points={[]} label="Health score" />);

@@ -56,7 +56,7 @@ export function WebsiteScoreTile({ websiteId }: { websiteId: string }) {
       : null;
 
   return (
-    <div className="flex min-h-40 flex-col gap-3.5 rounded-lg border border-border bg-card p-6">
+    <div className="flex flex-col gap-3.5 rounded-lg border border-border bg-card p-6">
       <span className="text-[13px] font-medium text-muted-foreground">Health score</span>
       {latest === undefined ? (
         <p className="text-sm text-muted-foreground">No audit yet</p>
