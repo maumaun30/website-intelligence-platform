@@ -11,6 +11,7 @@ describe('ScoreBadge', () => {
     render(<ScoreBadge score={92} />);
     expect(screen.getByText('92')).toBeInTheDocument();
     expect(screen.getByText('Good')).toBeInTheDocument();
+    expect(screen.getByLabelText('Health 92, Good')).toBeInTheDocument();
   });
 
   it('says so when there is no score', () => {

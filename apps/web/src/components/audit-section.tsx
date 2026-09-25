@@ -95,7 +95,10 @@ export function AuditSection({ scanId }: { scanId: string }) {
           </p>
           <AuditChanges scanId={scanId} audit={audit} />
           {totalIssues === 0 ? (
-            <p className="text-sm text-muted-foreground">No issues found.</p>
+            <div className="flex flex-col gap-1 rounded-lg border border-border bg-card p-6">
+              <span className="text-[15px] font-semibold">All {RULE_COUNT} rules pass</span>
+              <p className="text-sm text-muted-foreground">No issues found.</p>
+            </div>
           ) : (
             <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
               <div className="overflow-hidden rounded-lg border border-border bg-card">

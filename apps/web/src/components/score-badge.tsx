@@ -52,9 +52,13 @@ export function ScoreBadge({
     return <span className="text-sm text-muted-foreground">Not scored yet</span>;
   }
   return (
-    <span className="flex items-center gap-2.5">
-      <span className={`tnum ${SIZES[size]}`}>{score}</span>
-      <BandPill band={band} />
+    <span className="flex items-center gap-2.5" aria-label={`Health ${score}, ${BAND[band].word}`}>
+      <span aria-hidden="true" className={`tnum ${SIZES[size]}`}>
+        {score}
+      </span>
+      <span aria-hidden="true">
+        <BandPill band={band} />
+      </span>
     </span>
   );
 }

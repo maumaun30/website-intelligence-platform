@@ -31,7 +31,7 @@ export function UsageBar({
       >
         <div
           className={`h-full rounded-full transition-[width] duration-200 ease-out ${
-            share >= 1 ? 'bg-destructive' : 'bg-primary'
+            share >= 1 ? 'bg-destructive' : share >= 0.8 ? 'bg-warning' : 'bg-primary'
           }`}
           style={{ width: `${Math.round(share * 100)}%` }}
         />
