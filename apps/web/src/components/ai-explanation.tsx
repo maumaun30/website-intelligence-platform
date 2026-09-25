@@ -54,7 +54,7 @@ export function AiExplanation({ scanId, ruleId }: { scanId: string; ruleId: Audi
   const active = isActiveExplanation(explanation);
 
   return (
-    <div className="flex flex-col gap-2 rounded-md bg-muted/40 p-3">
+    <div className="flex flex-col gap-3">
       {requestIt.error ? (
         <p role="alert" className="text-xs text-destructive">
           {describeError(requestIt.error)}
@@ -87,7 +87,15 @@ export function AiExplanation({ scanId, ruleId }: { scanId: string; ruleId: Audi
           </div>
         )
       ) : active ? (
-        <p className="text-xs text-muted-foreground">Generating explanation…</p>
+        <div className="flex flex-col gap-3">
+          {/* The skeleton keeps the footprint of the text it will be replaced by. */}
+          <div aria-busy="true" className="flex flex-col gap-2">
+            <div className="h-3 w-[90%] rounded-sm bg-muted" />
+            <div className="h-3 w-[76%] rounded-sm bg-muted" />
+            <div className="h-3 w-[84%] rounded-sm bg-muted" />
+          </div>
+          <p className="text-xs text-muted-foreground">Generating explanation…</p>
+        </div>
       ) : explanation.status === 'failed' ? (
         <div className="flex flex-col gap-2">
           <p className="text-xs text-destructive">{describeStoredError(explanation.error)}</p>
@@ -101,25 +109,39 @@ export function AiExplanation({ scanId, ruleId }: { scanId: string; ruleId: Audi
           </Button>
         </div>
       ) : explanation.content ? (
-        <div className="flex flex-col gap-2 text-xs">
-          <p className="text-sm">{explanation.content.summary}</p>
-          <p className="text-muted-foreground">{explanation.content.whyItMatters}</p>
-          <ul className="flex flex-col gap-1">
-            {explanation.content.fixes.map((fix) => (
-              <li key={fix.path} className="flex flex-col">
-                <span className="font-medium">{fix.path}</span>
-                <span>{fix.action}</span>
-              </li>
-            ))}
-          </ul>
+        <div className="flex flex-col gap-4 text-xs">
+          <p className="text-sm leading-relaxed">{explanation.content.summary}</p>
+
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[13px] font-semibold">Why it matters</span>
+            <p className="text-[13px] leading-relaxed text-muted-foreground">
+              {explanation.content.whyItMatters}
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[13px] font-semibold">How to fix</span>
+            <ul className="flex flex-col gap-2">
+              {explanation.content.fixes.map((fix) => (
+                <li key={fix.path} className="flex flex-col gap-0.5">
+                  <span className="font-mono text-xs break-all text-muted-foreground">
+                    {fix.path}
+                  </span>
+                  <span className="text-[13px] leading-relaxed">{fix.action}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
           {explanation.content.generalAdvice.length > 0 ? (
-            <ul className="list-disc pl-4 text-muted-foreground">
+            <ul className="flex list-disc flex-col gap-1 pl-4 text-[13px] text-muted-foreground">
               {explanation.content.generalAdvice.map((advice) => (
                 <li key={advice}>{advice}</li>
               ))}
             </ul>
           ) : null}
-          <div className="flex items-center justify-between">
+
+          <div className="flex items-center justify-between gap-2 border-t border-border pt-3">
             <span className="text-muted-foreground">AI-generated — review before applying.</span>
             <Button
               variant="ghost"
