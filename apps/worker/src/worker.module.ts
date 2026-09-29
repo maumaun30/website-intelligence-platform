@@ -4,6 +4,7 @@ import type { WorkerEnv } from '@wintel/config';
 import { LoggerModule } from 'nestjs-pino';
 
 import { WorkerConfigModule } from './config/worker-config.module';
+import { GuardedFetchModule } from './infrastructure/network/guarded-fetch.module';
 import { MailerModule } from './infrastructure/mailer/mailer.module';
 import { PrismaModule } from './infrastructure/prisma/prisma.module';
 import { RedisModule } from './infrastructure/redis/redis.module';
@@ -45,6 +46,7 @@ export class WorkerModule {
             removeOnFail: { age: 24 * 3_600 },
           },
         }),
+        GuardedFetchModule,
         RedisModule,
         PrismaModule,
         MailerModule,

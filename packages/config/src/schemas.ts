@@ -162,6 +162,12 @@ export const workerEnvSchema = z.object({
   ...smtpEnvSchema.shape,
   ...aiWorkerEnvSchema.shape,
   WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(100).default(5),
+  /**
+   * Lets the crawler reach loopback and private addresses. Development only: it exists so a test
+   * site on localhost can be scanned. In production it must stay false, or a user can point a
+   * website at an internal address and read the response back out of the stored scan.
+   */
+  ALLOW_PRIVATE_SCAN_TARGETS: z.stringbool().default(false),
 });
 
 export type BaseEnv = z.infer<typeof baseEnvSchema>;
