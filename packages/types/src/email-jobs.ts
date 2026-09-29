@@ -15,6 +15,13 @@ export const emailJobSchema = z.discriminatedUnion('type', [
     url: z.string(),
   }),
   z.object({
+    type: z.literal('email-change'),
+    /** The address on file: better-auth asks the CURRENT address to approve the change. */
+    to: z.email(),
+    newEmail: z.email(),
+    url: z.string(),
+  }),
+  z.object({
     type: z.literal('invitation'),
     to: z.email(),
     organizationName: z.string(),

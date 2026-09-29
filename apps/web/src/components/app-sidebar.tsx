@@ -84,6 +84,27 @@ const NAV = [
       </svg>
     ),
   },
+  {
+    href: '/dashboard/settings',
+    label: 'Settings',
+    icon: (
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 18 18"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.6}
+        aria-hidden="true"
+      >
+        <circle cx="9" cy="9" r="2.5" />
+        <path
+          d="M9 1.5v2M9 14.5v2M1.5 9h2M14.5 9h2M3.7 3.7l1.4 1.4M12.9 12.9l1.4 1.4M14.3 3.7l-1.4 1.4M5.1 12.9l-1.4 1.4"
+          strokeLinecap="round"
+        />
+      </svg>
+    ),
+  },
 ] as const;
 
 const PLAN_LABELS = { free: 'Free plan', pro: 'Pro plan', agency: 'Agency plan' } as const;

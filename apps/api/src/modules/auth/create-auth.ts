@@ -68,6 +68,19 @@ export function createAuth({ env, prisma, enqueueEmail }: CreateAuthOptions) {
       requireEmailVerification: true,
       minPasswordLength: MIN_PASSWORD_LENGTH,
     },
+    user: {
+      changeEmail: {
+        enabled: true,
+        // The confirmation goes to the address already on file, never to the new one: a stolen
+        // session then cannot move an account to an address the attacker controls without also
+        // holding the original inbox. Better Auth only takes this path when the current address
+        // is verified; an unverified one falls back to verifying the new address instead, which
+        // is the same bar as signing up with it.
+        sendChangeEmailConfirmation: async ({ user, newEmail, url }) => {
+          await enqueueEmail({ type: 'email-change', to: user.email, newEmail, url });
+        },
+      },
+    },
     emailVerification: {
       // Fire-and-forget on the queue: the request never waits on SMTP, and a slow mailer cannot
       // become a timing oracle for whether an address exists.
