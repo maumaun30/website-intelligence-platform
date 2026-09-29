@@ -24,8 +24,36 @@ export function Sparkline({ points, label }: { points: SparklinePoint[]; label: 
     return null;
   }
 
-  const x = (index: number) =>
-    points.length === 1 ? WIDTH / 2 : PAD + (index * (WIDTH - PAD * 2)) / (points.length - 1);
+  // One audit is not a trend. Drawing it as a chart puts a lone dot in empty space between two
+  // copies of the same date, which reads as a broken graph rather than as "no history yet".
+  if (points.length === 1) {
+    return (
+      <figure className="m-0 flex flex-col gap-1.5">
+        <div className="flex h-16 items-center justify-center rounded-md border border-dashed border-border px-4">
+          <p className="text-center text-[13px] text-muted-foreground">
+            First audit, on {points[0]!.label}. The trend appears after the next scan.
+          </p>
+        </div>
+        <table className="sr-only">
+          <caption>{label}</caption>
+          <thead>
+            <tr>
+              <th scope="col">Audit</th>
+              <th scope="col">Score</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>{points[0]!.label}</td>
+              <td>{points[0]!.value}</td>
+            </tr>
+          </tbody>
+        </table>
+      </figure>
+    );
+  }
+
+  const x = (index: number) => PAD + (index * (WIDTH - PAD * 2)) / (points.length - 1);
   const y = (value: number) => PAD + ((100 - value) / 100) * (HEIGHT - PAD * 2);
   const coordinates = points.map((point, index) => `${x(index)},${y(point.value)}`).join(' ');
   const last = points[points.length - 1]!;
@@ -90,9 +118,14 @@ export function Sparkline({ points, label }: { points: SparklinePoint[]; label: 
           }}
         />
       </div>
-      <figcaption className="flex justify-between font-mono text-[11px] text-muted-foreground">
+      <figcaption
+        className={`flex font-mono text-[11px] text-muted-foreground ${
+          // Several audits on one day would otherwise print the same date at both ends.
+          points[0]!.label === last.label ? 'justify-center' : 'justify-between'
+        }`}
+      >
         <span>{points[0]!.label}</span>
-        <span>{last.label}</span>
+        {points[0]!.label === last.label ? null : <span>{last.label}</span>}
       </figcaption>
       <table className="sr-only">
         <caption>{label}</caption>
