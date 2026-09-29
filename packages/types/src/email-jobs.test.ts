@@ -25,6 +25,28 @@ describe('emailJobSchema', () => {
     expect(result.success).toBe(true);
   });
 
+  it('accepts an email-change job', () => {
+    const result = emailJobSchema.safeParse({
+      type: 'email-change',
+      to: 'ada@wintel.test',
+      newEmail: 'ada@analytical.test',
+      url: 'http://localhost:3000/verify-email-change?token=abc',
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects an email-change job whose new address is not an email', () => {
+    expect(
+      emailJobSchema.safeParse({
+        type: 'email-change',
+        to: 'ada@wintel.test',
+        newEmail: 'not-an-email',
+        url: 'http://localhost:3000/verify-email-change?token=abc',
+      }).success,
+    ).toBe(false);
+  });
+
   it('rejects an unknown job type', () => {
     expect(emailJobSchema.safeParse({ type: 'newsletter', to: 'a@b.test' }).success).toBe(false);
   });
