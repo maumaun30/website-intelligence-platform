@@ -24,7 +24,7 @@ export default function DashboardPage() {
           </p>
         </div>
         <Link
-          href="/dashboard/websites"
+          href="/dashboard/websites?add=1"
           className="inline-flex h-10 items-center gap-2 rounded-md bg-primary px-4.5 text-sm font-semibold text-primary-foreground transition-colors ease-out hover:bg-primary/90"
         >
           <svg

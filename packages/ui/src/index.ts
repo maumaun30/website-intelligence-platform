@@ -4,6 +4,8 @@ export { Button, buttonVariants } from './components/button';
 export type { ButtonProps } from './components/button';
 export { Card } from './components/card';
 export type { CardProps } from './components/card';
+export { Dialog } from './components/dialog';
+export type { DialogProps } from './components/dialog';
 export { Input } from './components/input';
 export type { InputProps } from './components/input';
 export { Label } from './components/label';
