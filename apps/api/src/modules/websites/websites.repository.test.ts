@@ -78,4 +78,52 @@ describe('WebsitesRepository org scoping', () => {
     const reread = await repo.findInOrg(site.id, a.organizationId);
     expect(reread?.name).toBe('A');
   });
+
+  it('remove scoped to the wrong org deletes nothing', async () => {
+    const a = await seedOrg();
+    const b = await seedOrg();
+    const site = await repo.create({
+      organizationId: a.organizationId,
+      createdById: a.userId,
+      name: 'A',
+      url: 'https://a4.test',
+      domain: `a4-${randomUUID().slice(0, 8)}.test`,
+      verificationToken: 't',
+    });
+
+    expect(await repo.remove(site.id, b.organizationId)).toBe(false);
+    expect(await repo.findInOrg(site.id, a.organizationId)).not.toBeNull();
+
+    expect(await repo.remove(site.id, a.organizationId)).toBe(true);
+    expect(await repo.findInOrg(site.id, a.organizationId)).toBeNull();
+  });
+
+  it('takes the website’s scans and their pages with it', async () => {
+    const a = await seedOrg();
+    const site = await repo.create({
+      organizationId: a.organizationId,
+      createdById: a.userId,
+      name: 'A',
+      url: 'https://a5.test',
+      domain: `a5-${randomUUID().slice(0, 8)}.test`,
+      verificationToken: 't',
+    });
+    const scan = await prisma.scan.create({
+      data: {
+        websiteId: site.id,
+        organizationId: a.organizationId,
+        status: 'completed',
+        trigger: 'manual',
+      },
+    });
+    await prisma.page.create({
+      data: { scanId: scan.id, url: 'https://a5.test/', path: '/', depth: 0, statusCode: 200 },
+    });
+
+    await repo.remove(site.id, a.organizationId);
+
+    // Nothing may be left pointing at a website that no longer exists.
+    expect(await prisma.scan.findUnique({ where: { id: scan.id } })).toBeNull();
+    expect(await prisma.page.count({ where: { scanId: scan.id } })).toBe(0);
+  });
 });
