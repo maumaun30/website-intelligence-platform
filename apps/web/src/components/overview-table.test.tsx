@@ -49,7 +49,7 @@ describe('OverviewTable', () => {
 
     expect(screen.getByRole('link', { name: 'Add your first website' })).toHaveAttribute(
       'href',
-      '/dashboard/websites',
+      '/dashboard/websites?add=1',
     );
   });
 
