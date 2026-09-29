@@ -69,3 +69,64 @@ export function HealthStatus() {
     </div>
   );
 }
+
+function StatusPill({ tone, children }: { tone: 'up' | 'down'; children: React.ReactNode }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full py-0.5 pl-2 pr-2.5 text-xs font-semibold ${
+        tone === 'up'
+          ? 'bg-success-soft text-success-soft-foreground'
+          : 'bg-destructive-soft text-destructive-soft-foreground'
+      }`}
+    >
+      <span
+        aria-hidden="true"
+        className={`size-1.75 rounded-full ${tone === 'up' ? 'bg-success' : 'bg-destructive'}`}
+      />
+      {children}
+    </span>
+  );
+}
+
+/**
+ * The same health check as one quiet line, for the foot of a page whose subject is something else.
+ * It shares the `health` query with {@link HealthStatus}, so it costs no extra request.
+ */
+export function HealthStrip() {
+  const { data, isPending, isError } = useQuery({
+    queryKey: ['health'],
+    queryFn: ({ signal }) => fetchHealth(signal),
+    refetchInterval: 10_000,
+  });
+
+  return (
+    <div className="flex flex-wrap items-center gap-4 rounded-md border border-border bg-card px-5 py-3 text-xs text-muted-foreground">
+      {isPending ? (
+        <span>Checking the API…</span>
+      ) : isError ? (
+        <>
+          <StatusPill tone="down">Unreachable</StatusPill>
+          <span>The API did not respond. Is it running on the configured address?</span>
+        </>
+      ) : (
+        <>
+          <StatusPill tone={data.status === 'ok' ? 'up' : 'down'}>
+            {data.status === 'ok' ? 'Operational' : 'Degraded'}
+          </StatusPill>
+          <span>System health</span>
+          <span className="font-mono">
+            API v{data.version} · up {data.uptimeSeconds}s
+          </span>
+          <span className="flex-1" />
+          {(Object.keys(DEPENDENCY_LABELS) as Array<keyof typeof DEPENDENCY_LABELS>).map((key) => (
+            <span key={key}>
+              {DEPENDENCY_LABELS[key]}{' '}
+              <strong className="font-medium text-foreground">{data.checks[key].status}</strong> ·{' '}
+              {data.checks[key].latencyMs} ms
+            </span>
+          ))}
+        </>
+      )}
+    </div>
+  );
+}

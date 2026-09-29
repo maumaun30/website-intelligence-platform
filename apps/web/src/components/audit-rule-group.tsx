@@ -1,72 +1,100 @@
 'use client';
 
-import { AUDIT_RULES, type AuditRuleId, type IssueSeverity } from '@wintel/types';
-import { Badge, Button } from '@wintel/ui';
+import { AUDIT_RULES, type AuditRuleId } from '@wintel/types';
+import { Button } from '@wintel/ui';
 import { useState } from 'react';
 
-import { AiExplanation } from '@/components/ai-explanation';
+import { SeverityTag } from '@/components/severity-tag';
 import { ISSUE_PAGE_SIZE, useRuleIssues } from '@/lib/use-audits';
 
-export const SEVERITY_VARIANT: Record<IssueSeverity, 'destructive' | 'default' | 'outline'> = {
-  critical: 'destructive',
-  warning: 'default',
-  notice: 'outline',
-};
-
-/** One rule's findings: a summary row that expands into the affected pages. */
+/**
+ * One rule's findings as a row that expands into the affected pages. The row is controlled by the
+ * audit section, which keeps one rule open at a time and explains that rule in the side panel.
+ */
 export function AuditRuleGroup({
   scanId,
   ruleId,
   count,
   auditUpdatedAt,
+  open,
+  onToggle,
 }: {
   scanId: string;
   ruleId: AuditRuleId;
   count: number;
   auditUpdatedAt: string;
+  open: boolean;
+  onToggle: () => void;
 }) {
   const rule = AUDIT_RULES[ruleId];
-  const [open, setOpen] = useState(false);
   const [offset, setOffset] = useState(0);
   const issues = useRuleIssues(scanId, ruleId, offset, auditUpdatedAt, open);
 
   return (
-    <details
-      className="rounded-md border border-border"
-      onToggle={(event) => setOpen(event.currentTarget.open)}
-    >
-      <summary className="flex cursor-pointer items-center justify-between gap-2 px-3 py-2 text-sm">
-        <span className="flex items-center gap-2">
-          <Badge variant={SEVERITY_VARIANT[rule.severity]}>{rule.severity}</Badge>
-          <span data-testid="audit-rule-title">{rule.title}</span>
+    <div className="border-t border-border first:border-t-0">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className={`flex h-14 w-full items-center gap-4 px-6 text-left transition-colors ease-out hover:bg-background ${
+          open ? 'bg-background' : ''
+        }`}
+      >
+        <span className="w-24 flex-none">
+          <SeverityTag severity={rule.severity} />
         </span>
-        <span className="text-xs text-muted-foreground">
-          {count} {count === 1 ? 'page' : 'pages'}
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span data-testid="audit-rule-title" className="truncate text-sm font-semibold">
+            {rule.title}
+          </span>
+          <span className="truncate font-mono text-xs text-muted-foreground">{ruleId}</span>
         </span>
-      </summary>
+        <span className="flex-none text-[13px] text-muted-foreground">
+          <strong className="tnum font-semibold text-foreground">{count}</strong>{' '}
+          {count === 1 ? 'page' : 'pages'}
+        </span>
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 14 14"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.6}
+          aria-hidden="true"
+          className={`flex-none text-muted-foreground transition-transform duration-150 ease-out ${
+            open ? 'rotate-90' : ''
+          }`}
+        >
+          <path d="M5 3l4 4-4 4" />
+        </svg>
+      </button>
 
       {open ? (
-        <div className="flex flex-col gap-2 border-t border-border px-3 py-2">
+        <div className="flex flex-col gap-2 bg-background px-6 pt-1 pb-4 pl-30">
           <p className="text-xs text-muted-foreground">{rule.description}</p>
-          <AiExplanation scanId={scanId} ruleId={ruleId} />
           {issues.isPending ? (
             <p className="text-xs text-muted-foreground">Loading pages…</p>
           ) : issues.isError ? (
             <p className="text-xs text-destructive">Could not load pages.</p>
           ) : (
             <>
-              <ul className="flex flex-col gap-1">
+              <ul className="flex flex-col">
                 {issues.data.items.map((issue) => (
-                  <li key={issue.id} className="text-xs">
-                    <span className="font-medium" title={issue.page.url}>
+                  <li
+                    key={issue.id}
+                    className="flex justify-between gap-6 border-b border-dashed border-border py-1.5 font-mono text-xs"
+                  >
+                    <span title={issue.page.url} className="min-w-0 flex-none truncate">
                       {issue.page.path}
-                    </span>{' '}
-                    <span className="text-muted-foreground">{issue.message}</span>
+                    </span>
+                    <span className="min-w-0 truncate text-muted-foreground" title={issue.message}>
+                      {issue.message}
+                    </span>
                   </li>
                 ))}
               </ul>
               {issues.data.total > ISSUE_PAGE_SIZE ? (
-                <div className="flex gap-2">
+                <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
                     size="sm"
@@ -83,12 +111,16 @@ export function AuditRuleGroup({
                   >
                     Next
                   </Button>
+                  <span className="text-xs text-muted-foreground">
+                    {offset + 1}–{Math.min(offset + ISSUE_PAGE_SIZE, issues.data.total)} of{' '}
+                    {issues.data.total}
+                  </span>
                 </div>
               ) : null}
             </>
           )}
         </div>
       ) : null}
-    </details>
+    </div>
   );
 }

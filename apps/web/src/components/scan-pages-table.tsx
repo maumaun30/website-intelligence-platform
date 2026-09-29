@@ -32,15 +32,23 @@ export function ScanPagesTable({ scanId, pagesCrawled }: { scanId: string; pages
   const last = Math.min(offset + data.items.length, data.total);
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="overflow-x-auto">
+    <div className="flex flex-col gap-3 overflow-hidden rounded-lg border border-border bg-card">
+      <div className="max-h-160 overflow-auto">
         <table className="w-full text-left text-sm">
-          <thead className="text-xs text-muted-foreground">
+          <thead className="sticky top-0 bg-background text-xs text-muted-foreground">
             <tr>
-              <th className="py-2 pr-4 font-medium">Path</th>
-              <th className="py-2 pr-4 font-medium">Status</th>
-              <th className="py-2 pr-4 font-medium">Time</th>
-              <th className="py-2 font-medium">Size</th>
+              <th scope="col" className="px-6 py-3 font-medium">
+                Path
+              </th>
+              <th scope="col" className="px-3 py-3 font-medium">
+                Status
+              </th>
+              <th scope="col" className="px-3 py-3 font-medium">
+                Time
+              </th>
+              <th scope="col" className="py-3 pr-6 pl-3 font-medium">
+                Size
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -49,23 +57,29 @@ export function ScanPagesTable({ scanId, pagesCrawled }: { scanId: string; pages
 
               return (
                 <tr key={page.id} className="border-t border-border">
-                  <td className="max-w-md truncate py-2 pr-4" title={page.url}>
+                  <td className="max-w-md truncate px-6 py-2.5 font-mono text-xs" title={page.url}>
                     {page.path}
                   </td>
-                  <td className={failed ? 'py-2 pr-4 text-destructive' : 'py-2 pr-4'}>
-                    {page.statusCode ?? page.error ?? '—'}
+                  <td className="px-3 py-2.5">
+                    <span className="tnum">{page.statusCode ?? page.error ?? '—'}</span>
+                    {/* The code alone reads as data; the word says what it means. */}
+                    {failed ? (
+                      <span className="ml-2 rounded-sm bg-destructive-soft px-1.5 py-0.5 text-xs font-semibold text-destructive-soft-foreground">
+                        Broken
+                      </span>
+                    ) : null}
                   </td>
-                  <td className="py-2 pr-4">
+                  <td className="tnum px-3 py-2.5">
                     {page.responseTimeMs === null ? '—' : `${page.responseTimeMs} ms`}
                   </td>
-                  <td className="py-2">{formatBytes(page.byteSize)}</td>
+                  <td className="tnum py-2.5 pr-6 pl-3">{formatBytes(page.byteSize)}</td>
                 </tr>
               );
             })}
           </tbody>
         </table>
       </div>
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
+      <div className="flex items-center justify-between gap-3 border-t border-border px-6 py-3 text-xs text-muted-foreground">
         <span>
           {offset + 1}–{last} of {data.total}
         </span>

@@ -6,45 +6,80 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Design Direction v1. Blue is what you can act on, orange is only the brand, and every status
+   colour ships with a word next to it. Soft tokens are the tinted pill backgrounds; each has a
+   -foreground that clears 4.5:1 on that tint. */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --background: oklch(0.98 0.003 265);
+  --foreground: oklch(0.244 0 0);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --success: oklch(0.596 0.145 163.225);
-  --success-foreground: oklch(0.985 0 0);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --card-foreground: oklch(0.244 0 0);
+  --primary: oklch(0.545 0.155 249);
+  --primary-foreground: oklch(1 0 0);
+  --primary-soft: oklch(0.957 0.02 245);
+  --primary-soft-foreground: oklch(0.545 0.155 249);
+  --muted: oklch(0.964 0.005 265);
+  --muted-foreground: oklch(0.508 0.02 262);
+  /* shadcn's meaning is kept: accent is the ghost/outline hover surface, not the brand. */
+  --accent: oklch(0.964 0.005 265);
+  --accent-foreground: oklch(0.244 0 0);
+  /* Orange is 3.1:1 on white, so --brand only fills logos and large display type; small orange
+     text uses --brand-strong. */
+  --brand: oklch(0.672 0.192 41);
+  --brand-foreground: oklch(1 0 0);
+  --brand-strong: oklch(0.553 0.177 40);
+  --destructive: oklch(0.59 0.2 24);
+  --destructive-foreground: oklch(1 0 0);
+  --destructive-soft: oklch(0.955 0.018 20);
+  --destructive-soft-foreground: oklch(0.46 0.165 24);
+  --warning: oklch(0.7 0.15 72);
+  --warning-foreground: oklch(1 0 0);
+  --warning-soft: oklch(0.969 0.028 84);
+  --warning-soft-foreground: oklch(0.44 0.105 67);
+  --success: oklch(0.64 0.14 158);
+  --success-foreground: oklch(1 0 0);
+  --success-soft: oklch(0.958 0.026 160);
+  --success-soft-foreground: oklch(0.42 0.095 158);
+  --border: oklch(0.928 0.006 265);
+  --input: oklch(0.928 0.006 265);
+  --ring: oklch(0.545 0.155 249);
   --radius: 0.625rem;
+  --radius-sm-token: 0.375rem;
+  --radius-lg-token: 0.75rem;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.985 0 0);
-  --success: oklch(0.696 0.17 162.48);
-  --success-foreground: oklch(0.145 0 0);
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --background: oklch(0.18 0.008 260);
+  --foreground: oklch(0.945 0.004 265);
+  --card: oklch(0.215 0.012 260);
+  --card-foreground: oklch(0.945 0.004 265);
+  /* White fails contrast on the lighter dark-mode blue, so its ink goes dark. */
+  --primary: oklch(0.69 0.13 245);
+  --primary-foreground: oklch(0.21 0.025 250);
+  --primary-soft: oklch(0.69 0.13 245 / 14%);
+  --primary-soft-foreground: oklch(0.82 0.085 245);
+  --muted: oklch(0.25 0.012 260);
+  --muted-foreground: oklch(0.735 0.016 260);
+  --accent: oklch(0.25 0.012 260);
+  --accent-foreground: oklch(0.945 0.004 265);
+  --brand: oklch(0.72 0.18 45);
+  --brand-foreground: oklch(0.18 0.008 260);
+  --brand-strong: oklch(0.78 0.14 48);
+  --destructive: oklch(0.68 0.17 22);
+  --destructive-foreground: oklch(0.18 0.008 260);
+  --destructive-soft: oklch(0.68 0.17 22 / 14%);
+  --destructive-soft-foreground: oklch(0.79 0.105 20);
+  --warning: oklch(0.79 0.13 78);
+  --warning-foreground: oklch(0.18 0.008 260);
+  --warning-soft: oklch(0.79 0.13 78 / 14%);
+  --warning-soft-foreground: oklch(0.85 0.09 80);
+  --success: oklch(0.745 0.14 158);
+  --success-foreground: oklch(0.18 0.008 260);
+  --success-soft: oklch(0.745 0.14 158 / 14%);
+  --success-soft-foreground: oklch(0.84 0.095 160);
+  --border: oklch(1 0 0 / 9%);
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.69 0.13 245);
 }
 
 @theme inline {
@@ -54,22 +89,59 @@
   --color-card-foreground: var(--card-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-soft-foreground: var(--primary-soft-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-strong: var(--brand-strong);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-soft: var(--destructive-soft);
+  --color-destructive-soft-foreground: var(--destructive-soft-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-soft-foreground: var(--warning-soft-foreground);
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
+  --color-success-soft: var(--success-soft);
+  --color-success-soft-foreground: var(--success-soft-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --radius-sm: var(--radius-sm-token);
   --radius-md: var(--radius);
+  --radius-lg: var(--radius-lg-token);
+
+  /* 160 ms for controls, 240 ms for panels. */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 @layer base {
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-background font-sans text-foreground antialiased;
+  }
+
+  /* Scores and counts are polled, so every number is tabular to stop them jittering. */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

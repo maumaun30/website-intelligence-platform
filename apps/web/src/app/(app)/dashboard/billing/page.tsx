@@ -6,12 +6,29 @@ import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { PlanCards } from '@/components/plan-cards';
+import { UsageBar } from '@/components/usage-bar';
 import { SubscriptionBanner } from '@/components/subscription-banner';
 import { refusalMessage } from '@/lib/billing-messages';
 import { useBilling, useOpenPortal, useStartCheckout } from '@/lib/use-billing';
 
 const POLL_INTERVAL_MS = 2000;
 const POLL_TIMEOUT_MS = 30000;
+
+const PLAN_NAMES = { free: 'Free', pro: 'Pro', agency: 'Agency' } as const;
+
+const periodDate = new Intl.DateTimeFormat('en', {
+  dateStyle: 'medium',
+  timeZone: 'UTC',
+});
+
+function UsageCard({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-2.5 rounded-lg border border-border bg-card p-5">
+      <span className="text-[13px] font-medium">{label}</span>
+      {children}
+    </div>
+  );
+}
 
 export default function BillingPage() {
   const billing = useBilling();
@@ -74,11 +91,31 @@ export default function BillingPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <header className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold tracking-tight">Plan</h1>
-        <p className="text-sm text-muted-foreground">
-          What your organization can use, and how much of it you have used this month.
-        </p>
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div className="flex flex-col gap-1.5">
+          <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">Billing</h1>
+          <p className="text-sm text-muted-foreground">
+            {billing.data
+              ? `${PLAN_NAMES[billing.data.plan]} plan${
+                  billing.data.subscription?.currentPeriodEnd
+                    ? ` · ${billing.data.subscription.cancelAtPeriodEnd ? 'ends' : 'renews'} ${periodDate.format(
+                        new Date(billing.data.subscription.currentPeriodEnd),
+                      )} (UTC)`
+                    : ''
+                }`
+              : 'What your organization can use, and how much of it you have used this month.'}
+          </p>
+        </div>
+        {hasSubscription ? (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={openPortal.isPending}
+            onClick={onManage}
+          >
+            Manage in Stripe ↗
+          </Button>
+        ) : null}
       </header>
 
       {activating ? (
@@ -113,23 +150,49 @@ export default function BillingPage() {
             />
           ) : null}
 
-          {hasSubscription ? (
-            <div>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={openPortal.isPending}
-                onClick={onManage}
-              >
-                Manage billing
-              </Button>
-            </div>
-          ) : null}
+          <div className="grid gap-5 md:grid-cols-3">
+            <UsageCard label="Websites">
+              <UsageBar
+                label="Websites"
+                labelHidden
+                used={billing.data.usage.websites}
+                limit={billing.data.limits.websites}
+              />
+              <span className="text-xs text-muted-foreground">
+                {Math.max(billing.data.limits.websites - billing.data.usage.websites, 0)} more
+                available on this plan
+              </span>
+            </UsageCard>
+            <UsageCard label="AI explanations">
+              <UsageBar
+                label="AI explanations"
+                labelHidden
+                used={billing.data.usage.aiExplanationsThisMonth}
+                limit={billing.data.limits.aiExplanationsPerMonth}
+              />
+              <span className="text-xs text-muted-foreground">
+                {billing.data.limits.aiExplanationsPerMonth === 0
+                  ? 'Not part of this plan'
+                  : `${Math.max(
+                      billing.data.limits.aiExplanationsPerMonth -
+                        billing.data.usage.aiExplanationsThisMonth,
+                      0,
+                    )} left · resets on the 1st, 00:00 UTC`}
+              </span>
+            </UsageCard>
+            <UsageCard label="Pages per scan">
+              <span className="tnum text-3xl leading-none font-semibold tracking-[-0.02em]">
+                {billing.data.limits.pagesPerScan}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                The ceiling for one crawl. A site set above it is clamped to this.
+              </span>
+            </UsageCard>
+          </div>
 
           <PlanCards
             current={billing.data.plan}
             plans={billing.data.plans}
-            usage={billing.data.usage}
             hasSubscription={hasSubscription}
             onSubscribe={onSubscribe}
             pending={startCheckout.isPending}
