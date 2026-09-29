@@ -109,7 +109,11 @@ export function UserMenu({
         <div
           role="menu"
           aria-label="Account"
-          className="animate-rise absolute bottom-full left-0 z-20 mb-2 flex w-60 flex-col gap-1 rounded-lg border border-border bg-card p-1.5 shadow-xl"
+          className={`animate-rise absolute bottom-full left-0 z-20 mb-2 flex flex-col gap-1 rounded-lg border border-border bg-card p-1.5 shadow-xl ${
+            // Expanded, the menu is exactly as wide as the sidebar; collapsed, it spills over the
+            // content beside it, which nothing clips now that the sidebar is not a scroll box.
+            collapsed ? 'w-60' : 'w-full'
+          }`}
         >
           <div className="flex flex-col px-2.5 py-2">
             <span className="truncate text-[13px] font-semibold">{user.name}</span>

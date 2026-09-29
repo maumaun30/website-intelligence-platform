@@ -100,7 +100,7 @@ export function AppSidebar({
 
   return (
     <aside
-      className={`${collapsed ? 'w-18' : 'w-62'} sticky top-0 flex h-dvh flex-none flex-col gap-5 overflow-y-auto border-r border-border bg-card p-4 transition-[width] duration-200 ease-out`}
+      className={`${collapsed ? 'w-18' : 'w-62'} sticky top-0 flex h-dvh flex-none flex-col gap-4 border-r border-border bg-card p-4 transition-[width] duration-200 ease-out`}
     >
       <div className="flex h-8 items-center justify-between gap-2">
         <Link href="/dashboard" className="flex items-center gap-2.5">
@@ -144,75 +144,77 @@ export function AppSidebar({
         </div>
       )}
 
-      <nav aria-label="Main" className="flex flex-col gap-0.5">
-        {NAV.map((item) => {
-          const active =
-            item.href === '/dashboard' ? pathname === item.href : pathname.startsWith(item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-current={active ? 'page' : undefined}
-              title={collapsed ? item.label : undefined}
-              className={`flex h-10 items-center gap-3 rounded-md px-3 text-sm transition-colors ease-out ${
-                active
-                  ? 'bg-primary-soft font-semibold text-primary-soft-foreground'
-                  : 'font-medium text-muted-foreground hover:bg-accent hover:text-foreground'
-              }`}
-            >
-              <span className="relative flex-none">
-                {item.icon}
-                {item.href === '/dashboard/websites' && needsVerification ? (
-                  <span
-                    aria-hidden="true"
-                    className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-warning ring-2 ring-card"
-                  />
-                ) : null}
-              </span>
-              {collapsed ? (
-                <span className="sr-only">
-                  {item.label}
-                  {item.href === '/dashboard/websites' && needsVerification
-                    ? ' — needs verification'
-                    : ''}
-                </span>
-              ) : (
-                <>
-                  <span className="flex-1">{item.label}</span>
+      <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto">
+        <nav aria-label="Main" className="flex flex-col gap-0.5">
+          {NAV.map((item) => {
+            const active =
+              item.href === '/dashboard' ? pathname === item.href : pathname.startsWith(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-current={active ? 'page' : undefined}
+                title={collapsed ? item.label : undefined}
+                className={`flex h-10 items-center gap-3 rounded-md px-3 text-sm transition-colors ease-out ${
+                  active
+                    ? 'bg-primary-soft font-semibold text-primary-soft-foreground'
+                    : 'font-medium text-muted-foreground hover:bg-accent hover:text-foreground'
+                }`}
+              >
+                <span className="relative flex-none">
+                  {item.icon}
                   {item.href === '/dashboard/websites' && needsVerification ? (
-                    <span className="sr-only">needs verification</span>
+                    <span
+                      aria-hidden="true"
+                      className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-warning ring-2 ring-card"
+                    />
                   ) : null}
-                  {item.href === '/dashboard/websites' && websiteCount !== undefined ? (
-                    <span className="tnum font-mono text-xs text-muted-foreground">
-                      {websiteCount}
-                    </span>
-                  ) : null}
-                </>
-              )}
-            </Link>
-          );
-        })}
-      </nav>
+                </span>
+                {collapsed ? (
+                  <span className="sr-only">
+                    {item.label}
+                    {item.href === '/dashboard/websites' && needsVerification
+                      ? ' — needs verification'
+                      : ''}
+                  </span>
+                ) : (
+                  <>
+                    <span className="flex-1">{item.label}</span>
+                    {item.href === '/dashboard/websites' && needsVerification ? (
+                      <span className="sr-only">needs verification</span>
+                    ) : null}
+                    {item.href === '/dashboard/websites' && websiteCount !== undefined ? (
+                      <span className="tnum font-mono text-xs text-muted-foreground">
+                        {websiteCount}
+                      </span>
+                    ) : null}
+                  </>
+                )}
+              </Link>
+            );
+          })}
+        </nav>
 
-      <div className="flex-1" />
+        <div className="flex-1" />
 
-      {collapsed || !billing.data ? null : (
-        <div className="flex flex-col gap-3 rounded-md border border-border p-3.5">
-          <UsageBar
-            label="Websites"
-            used={billing.data.usage.websites}
-            limit={billing.data.limits.websites}
-          />
-          <UsageBar
-            label="AI explanations"
-            used={billing.data.usage.aiExplanationsThisMonth}
-            limit={billing.data.limits.aiExplanationsPerMonth}
-          />
-          <span className="text-[11px] text-muted-foreground">
-            AI explanations reset on the 1st, 00:00 UTC
-          </span>
-        </div>
-      )}
+        {collapsed || !billing.data ? null : (
+          <div className="flex flex-col gap-3 rounded-md border border-border p-3.5">
+            <UsageBar
+              label="Websites"
+              used={billing.data.usage.websites}
+              limit={billing.data.limits.websites}
+            />
+            <UsageBar
+              label="AI explanations"
+              used={billing.data.usage.aiExplanationsThisMonth}
+              limit={billing.data.limits.aiExplanationsPerMonth}
+            />
+            <span className="text-[11px] text-muted-foreground">
+              AI explanations reset on the 1st, 00:00 UTC
+            </span>
+          </div>
+        )}
+      </div>
 
       <UserMenu user={user} collapsed={collapsed} />
     </aside>
