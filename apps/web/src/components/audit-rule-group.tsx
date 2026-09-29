@@ -70,7 +70,7 @@ export function AuditRuleGroup({
       </button>
 
       {open ? (
-        <div className="flex flex-col gap-2 bg-background px-6 pt-1 pb-4 pl-30">
+        <div className="animate-rise flex flex-col gap-2 bg-background px-6 pt-1 pb-4 pl-30">
           <p className="text-xs text-muted-foreground">{rule.description}</p>
           {issues.isPending ? (
             <p className="text-xs text-muted-foreground">Loading pages…</p>

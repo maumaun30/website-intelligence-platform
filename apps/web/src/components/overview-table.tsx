@@ -121,9 +121,12 @@ export function OverviewTable({ rows }: { rows: OverviewRow[] }) {
               </th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="stagger">
             {rows.map((row) => (
-              <tr key={row.websiteId} className="h-16 border-t border-border hover:bg-background">
+              <tr
+                key={row.websiteId}
+                className="h-16 border-t border-border transition-colors duration-150 ease-out hover:bg-background"
+              >
                 <td className="px-6">
                   <div className="flex items-center gap-3">
                     <span

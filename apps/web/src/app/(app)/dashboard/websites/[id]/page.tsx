@@ -109,7 +109,7 @@ export default function WebsiteDetailPage({ params }: { params: Promise<{ id: st
       </div>
 
       {tab === 'audit' ? (
-        <div className="flex flex-col gap-5">
+        <div key="audit" className="animate-fade flex flex-col gap-5">
           <div className="grid gap-5 lg:grid-cols-2">
             <WebsiteScoreTile websiteId={data.id} />
             <ScanPanel website={data} />
@@ -132,10 +132,17 @@ export default function WebsiteDetailPage({ params }: { params: Promise<{ id: st
         )
       ) : null}
 
-      {tab === 'verification' ? <VerificationPanel website={data} /> : null}
+      {tab === 'verification' ? (
+        <div key="verification" className="animate-fade">
+          <VerificationPanel website={data} />
+        </div>
+      ) : null}
 
       {tab === 'settings' ? (
-        <div className="flex max-w-2xl flex-col gap-4 rounded-lg border border-border bg-card p-6">
+        <div
+          key="settings"
+          className="animate-fade flex max-w-2xl flex-col gap-4 rounded-lg border border-border bg-card p-6"
+        >
           <h2 className="text-[15px] font-semibold">Scan settings</h2>
           <ScanConfigForm website={data} />
         </div>

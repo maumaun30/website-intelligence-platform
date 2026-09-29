@@ -9,6 +9,7 @@ export type { InputProps } from './components/input';
 export { Label } from './components/label';
 export type { LabelProps } from './components/label';
 export { Select } from './components/select';
+export { Skeleton } from './components/skeleton';
 export type { SelectProps } from './components/select';
 export { Textarea } from './components/textarea';
 export type { TextareaProps } from './components/textarea';
