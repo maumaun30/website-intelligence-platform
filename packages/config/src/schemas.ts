@@ -103,6 +103,35 @@ export const stripeApiEnvSchema = z
     }
   });
 
+/**
+ * Social sign-in. Each provider is optional and only registered when BOTH halves of its pair are
+ * present, so local and CI runs stay offline and a half-configured provider fails loudly at boot
+ * rather than silently disappearing from the sign-in page.
+ */
+export const oauthApiEnvSchema = z
+  .object({
+    GITHUB_CLIENT_ID: z.string().min(1).optional(),
+    GITHUB_CLIENT_SECRET: z.string().min(1).optional(),
+    GOOGLE_CLIENT_ID: z.string().min(1).optional(),
+    GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
+  })
+  .superRefine((env, ctx) => {
+    for (const [id, secret] of [
+      ['GITHUB_CLIENT_ID', 'GITHUB_CLIENT_SECRET'],
+      ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'],
+    ] as const) {
+      const hasId = env[id] !== undefined;
+      const hasSecret = env[secret] !== undefined;
+      if (hasId !== hasSecret) {
+        ctx.addIssue({
+          code: 'custom',
+          path: [hasId ? secret : id],
+          message: `${id} and ${secret} must be set together`,
+        });
+      }
+    }
+  });
+
 export const apiEnvSchema = z
   .object({
     ...baseEnvSchema.shape,
@@ -122,7 +151,8 @@ export const apiEnvSchema = z
           .filter(Boolean),
       ),
   })
-  .and(stripeApiEnvSchema);
+  .and(stripeApiEnvSchema)
+  .and(oauthApiEnvSchema);
 
 export const workerEnvSchema = z.object({
   ...baseEnvSchema.shape,

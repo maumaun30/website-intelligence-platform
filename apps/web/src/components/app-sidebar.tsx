@@ -4,9 +4,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 
-import { SignOutButton } from '@/components/sign-out-button';
-import { ThemeToggle } from '@/components/theme-toggle';
 import { UsageBar } from '@/components/usage-bar';
+import { UserMenu } from '@/components/user-menu';
 import { SIDEBAR_COOKIE } from '@/lib/sidebar';
 import { useBilling } from '@/lib/use-billing';
 import { useOverview } from '@/lib/use-insights';
@@ -66,57 +65,9 @@ const NAV = [
       </svg>
     ),
   },
-  {
-    href: '/dashboard/billing',
-    label: 'Billing',
-    icon: (
-      <svg
-        width="18"
-        height="18"
-        viewBox="0 0 18 18"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={1.6}
-        aria-hidden="true"
-      >
-        <rect x="2" y="4" width="14" height="10" rx="2" />
-        <path d="M2 7.5h14" />
-      </svg>
-    ),
-  },
-  {
-    href: '/dashboard/settings',
-    label: 'Settings',
-    icon: (
-      <svg
-        width="18"
-        height="18"
-        viewBox="0 0 18 18"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={1.6}
-        aria-hidden="true"
-      >
-        <circle cx="9" cy="9" r="2.5" />
-        <path
-          d="M9 1.5v2M9 14.5v2M1.5 9h2M14.5 9h2M3.7 3.7l1.4 1.4M12.9 12.9l1.4 1.4M14.3 3.7l-1.4 1.4M5.1 12.9l-1.4 1.4"
-          strokeLinecap="round"
-        />
-      </svg>
-    ),
-  },
 ] as const;
 
 const PLAN_LABELS = { free: 'Free plan', pro: 'Pro plan', agency: 'Agency plan' } as const;
-
-function initials(name: string, email: string): string {
-  const source = name.trim().length > 0 ? name.trim() : email;
-  const parts = source.split(/[\s@._-]+/).filter((part) => part.length > 0);
-  return parts
-    .slice(0, 2)
-    .map((part) => part[0]!.toUpperCase())
-    .join('');
-}
 
 /**
  * The app shell's navigation. It collapses from 248px to 72px and stores that in a cookie, so the
@@ -149,7 +100,7 @@ export function AppSidebar({
 
   return (
     <aside
-      className={`${collapsed ? 'w-18' : 'w-62'} flex flex-none flex-col gap-5 border-r border-border bg-card p-4 transition-[width] duration-200 ease-out`}
+      className={`${collapsed ? 'w-18' : 'w-62'} sticky top-0 flex h-dvh flex-none flex-col gap-5 overflow-y-auto border-r border-border bg-card p-4 transition-[width] duration-200 ease-out`}
     >
       <div className="flex h-8 items-center justify-between gap-2">
         <Link href="/dashboard" className="flex items-center gap-2.5">
@@ -263,25 +214,7 @@ export function AppSidebar({
         </div>
       )}
 
-      {collapsed ? null : <ThemeToggle />}
-
-      <div className="flex items-center gap-2.5 border-t border-border pt-3">
-        <span
-          aria-hidden="true"
-          className="grid size-8 flex-none place-items-center rounded-full bg-primary-soft text-xs font-semibold text-primary-soft-foreground"
-        >
-          {initials(user.name, user.email)}
-        </span>
-        {collapsed ? null : (
-          <>
-            <span className="flex min-w-0 flex-1 flex-col">
-              <span className="truncate text-[13px] font-medium">{user.name}</span>
-              <span className="truncate text-xs text-muted-foreground">{user.email}</span>
-            </span>
-            <SignOutButton />
-          </>
-        )}
-      </div>
+      <UserMenu user={user} collapsed={collapsed} />
     </aside>
   );
 }
