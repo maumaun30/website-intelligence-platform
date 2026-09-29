@@ -9,6 +9,7 @@ const LABELS: Record<string, string> = {
   dashboard: 'Overview',
   websites: 'Websites',
   billing: 'Billing',
+  settings: 'Settings',
 };
 
 /**

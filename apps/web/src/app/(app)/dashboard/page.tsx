@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { HealthStrip } from '@/components/health-status';
 import { OverviewStats } from '@/components/overview-stats';
 import { OverviewTable } from '@/components/overview-table';
+import { StatCardsSkeleton, TableSkeleton } from '@/components/skeletons';
 import { useOverview } from '@/lib/use-insights';
 
 export default function DashboardPage() {
@@ -23,7 +24,7 @@ export default function DashboardPage() {
           </p>
         </div>
         <Link
-          href="/dashboard/websites"
+          href="/dashboard/websites?add=1"
           className="inline-flex h-10 items-center gap-2 rounded-md bg-primary px-4.5 text-sm font-semibold text-primary-foreground transition-colors ease-out hover:bg-primary/90"
         >
           <svg
@@ -42,7 +43,10 @@ export default function DashboardPage() {
       </header>
 
       {overview.isPending ? (
-        <p className="text-sm text-muted-foreground">Loading websites…</p>
+        <div className="flex flex-col gap-7" aria-busy="true">
+          <StatCardsSkeleton />
+          <TableSkeleton label="Loading your websites" />
+        </div>
       ) : overview.isError ? (
         <p className="text-sm text-destructive">Could not load the overview.</p>
       ) : (

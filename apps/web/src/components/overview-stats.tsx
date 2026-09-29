@@ -2,6 +2,7 @@ import type { OverviewRow } from '@wintel/types';
 import { scoreBand } from '@wintel/types';
 import Link from 'next/link';
 
+import { AnimatedNumber } from '@/components/animated-number';
 import { BandPill } from '@/components/score-badge';
 import { ScoreDelta } from '@/components/score-delta';
 
@@ -52,11 +53,11 @@ export function OverviewStats({ rows }: { rows: OverviewRow[] }) {
   const worst = fixFirst(rows);
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[1fr_1fr_1.35fr]">
+    <div className="stagger grid gap-5 lg:grid-cols-[1fr_1fr_1.35fr]">
       <StatCard label="Average health">
         <div className="flex items-baseline gap-3">
           <span className="tnum text-[44px] leading-none font-semibold tracking-[-0.03em]">
-            {average ?? '—'}
+            {average === null ? '—' : <AnimatedNumber value={average} />}
           </span>
           {band === null ? null : <BandPill band={band} />}
         </div>
@@ -69,7 +70,7 @@ export function OverviewStats({ rows }: { rows: OverviewRow[] }) {
       <StatCard label="Critical issues">
         <div className="flex items-baseline gap-3">
           <span className="tnum text-[44px] leading-none font-semibold tracking-[-0.03em]">
-            {critical}
+            <AnimatedNumber value={critical} />
           </span>
           <span className="text-[13px] text-muted-foreground">
             {withCritical === 1 ? 'on 1 website' : `across ${withCritical} websites`}

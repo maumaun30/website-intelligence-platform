@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 
+import { TableSkeleton } from '@/components/skeletons';
 import { describeNextScan } from '@/lib/schedule-text';
 import { useWebsites } from '@/lib/use-websites';
 
@@ -16,7 +17,7 @@ export function WebsitesList() {
   const { data, isPending, isError } = useWebsites();
 
   if (isPending) {
-    return <p className="text-sm text-muted-foreground">Loading websites…</p>;
+    return <TableSkeleton rows={3} label="Loading your websites" />;
   }
 
   if (isError) {

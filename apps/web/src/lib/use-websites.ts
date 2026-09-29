@@ -49,7 +49,12 @@ export function useDeleteWebsite() {
 
   return useMutation({
     mutationFn: (id: string) => deleteWebsite(id),
-    onSuccess: () => client.invalidateQueries({ queryKey: ['websites'] }),
+    onSuccess: () => {
+      // A deleted website leaves the overview and frees a slot against the plan's website quota.
+      void client.invalidateQueries({ queryKey: ['websites'] });
+      void client.invalidateQueries({ queryKey: ['overview'] });
+      void client.invalidateQueries({ queryKey: ['billing'] });
+    },
   });
 }
 

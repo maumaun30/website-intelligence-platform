@@ -113,7 +113,7 @@ export default function HomePage() {
 
       <main className="flex flex-1 flex-col">
         <section className="grid items-center gap-16 px-6 py-20 lg:px-16 lg:py-24 xl:grid-cols-2">
-          <div className="flex flex-col gap-6">
+          <div className="stagger flex flex-col gap-6">
             <span className="font-mono text-xs font-semibold tracking-[0.08em] text-brand-strong uppercase">
               Website health monitoring
             </span>

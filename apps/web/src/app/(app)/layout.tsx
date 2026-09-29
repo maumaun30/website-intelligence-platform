@@ -3,6 +3,8 @@ import type { ReactNode } from 'react';
 
 import { AppBreadcrumbs } from '@/components/app-breadcrumbs';
 import { AppSidebar } from '@/components/app-sidebar';
+import { PageTransition } from '@/components/page-transition';
+import { VerificationNotice } from '@/components/verification-notice';
 import { SIDEBAR_COOKIE } from '@/lib/sidebar';
 import { requireSession } from '@/lib/server-session';
 
@@ -18,7 +20,10 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         <header className="flex h-14 flex-none items-center border-b border-border bg-card px-10">
           <AppBreadcrumbs />
         </header>
-        <main className="flex-1 px-10 py-9">{children}</main>
+        <VerificationNotice />
+        <main className="flex-1 px-10 py-9">
+          <PageTransition>{children}</PageTransition>
+        </main>
       </div>
     </div>
   );

@@ -4,12 +4,14 @@ import type { Website } from '@wintel/types';
 import { use, useState } from 'react';
 
 import { AuditSection } from '@/components/audit-section';
+import { DeleteWebsiteDialog } from '@/components/delete-website-dialog';
 import { ScanConfigForm } from '@/components/scan-config-form';
 import { ScanPagesTable } from '@/components/scan-pages-table';
 import { ScanPanel } from '@/components/scan-panel';
 import { VerificationPanel } from '@/components/verification-panel';
 import { WebsiteScoreTile } from '@/components/website-score-tile';
 import { describeNextScan } from '@/lib/schedule-text';
+import { useMe } from '@/lib/use-account';
 import { useScans } from '@/lib/use-scans';
 import { useWebsite } from '@/lib/use-websites';
 
@@ -64,7 +66,10 @@ export default function WebsiteDetailPage({ params }: { params: Promise<{ id: st
   const { id } = use(params);
   const { data, isPending, isError } = useWebsite(id);
   const scans = useScans(id);
-  const [tab, setTab] = useState<Tab>('audit');
+  const me = useMe();
+  // An unverified website has no audit to show, so it opens on the thing it needs.
+  const [chosenTab, setChosenTab] = useState<Tab | null>(null);
+  const tab = chosenTab ?? (data?.verificationStatus === 'verified' ? 'audit' : 'verification');
 
   if (isPending) {
     return <p className="text-sm text-muted-foreground">Loading…</p>;
@@ -91,7 +96,7 @@ export default function WebsiteDetailPage({ params }: { params: Promise<{ id: st
             type="button"
             role="tab"
             aria-selected={tab === option}
-            onClick={() => setTab(option)}
+            onClick={() => setChosenTab(option)}
             className={`-mb-px pb-3 text-sm transition-colors ease-out ${
               tab === option
                 ? 'border-b-2 border-primary font-semibold text-foreground'
@@ -107,7 +112,7 @@ export default function WebsiteDetailPage({ params }: { params: Promise<{ id: st
       </div>
 
       {tab === 'audit' ? (
-        <div className="flex flex-col gap-5">
+        <div key="audit" className="animate-fade flex flex-col gap-5">
           <div className="grid gap-5 lg:grid-cols-2">
             <WebsiteScoreTile websiteId={data.id} />
             <ScanPanel website={data} />
@@ -130,13 +135,35 @@ export default function WebsiteDetailPage({ params }: { params: Promise<{ id: st
         )
       ) : null}
 
-      {tab === 'verification' ? <VerificationPanel website={data} /> : null}
+      {tab === 'verification' ? (
+        <div key="verification" className="animate-fade">
+          <VerificationPanel website={data} />
+        </div>
+      ) : null}
 
       {tab === 'settings' ? (
-        <div className="flex max-w-2xl flex-col gap-4 rounded-lg border border-border bg-card p-6">
+        <div
+          key="settings"
+          className="animate-fade flex max-w-2xl flex-col gap-4 rounded-lg border border-border bg-card p-6"
+        >
           <h2 className="text-[15px] font-semibold">Scan settings</h2>
           <ScanConfigForm website={data} />
         </div>
+      ) : null}
+
+      {tab === 'settings' && (me.data?.role === 'owner' || me.data?.role === 'admin') ? (
+        <section className="flex max-w-2xl flex-col gap-3 rounded-lg border border-destructive/30 bg-card p-6">
+          <div className="flex flex-col gap-1">
+            <h2 className="text-[15px] font-semibold">Delete this website</h2>
+            <p className="text-[13px] text-muted-foreground">
+              Removes it and its entire scan and audit history, and frees a slot against your
+              plan&apos;s website limit.
+            </p>
+          </div>
+          <div className="w-fit">
+            <DeleteWebsiteDialog website={data} />
+          </div>
+        </section>
       ) : null}
     </div>
   );

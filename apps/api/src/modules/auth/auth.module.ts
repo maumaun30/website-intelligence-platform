@@ -5,6 +5,7 @@ import { EMAIL_QUEUE } from '@wintel/types';
 
 import { API_ENV } from '../../config/api-config.module';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
+import { AuthProvidersController } from './auth-providers.controller';
 import { AUTH_INSTANCE } from './auth.tokens';
 import { type Auth, createAuth } from './create-auth';
 import { EmailQueueService } from './email-queue.service';
@@ -34,7 +35,7 @@ export { AUTH_INSTANCE } from './auth.tokens';
     }),
     BullModule.registerQueue({ name: EMAIL_QUEUE }),
   ],
-  controllers: [MeController],
+  controllers: [MeController, AuthProvidersController],
   providers: [
     EmailQueueService,
     SessionGuard,

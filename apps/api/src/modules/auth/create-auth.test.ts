@@ -73,4 +73,24 @@ describe('createAuth', () => {
     expect(verification).toBeDefined();
     expect(verification).toMatchObject({ type: 'verification', to: email });
   });
+
+  it('asks the address on file to approve an email change', async () => {
+    const changeEmail = auth.options.user?.changeEmail;
+    expect(changeEmail?.enabled).toBe(true);
+
+    await changeEmail?.sendChangeEmailConfirmation?.({
+      user: { email: 'ada@wintel.test' },
+      newEmail: 'ada@analytical.test',
+      url: 'http://localhost:3000/verify-email-change?token=abc',
+      token: 'abc',
+    } as never);
+
+    expect(enqueued).toContainEqual({
+      type: 'email-change',
+      // Not the new address: approving from the new inbox would defeat the point.
+      to: 'ada@wintel.test',
+      newEmail: 'ada@analytical.test',
+      url: 'http://localhost:3000/verify-email-change?token=abc',
+    });
+  });
 });

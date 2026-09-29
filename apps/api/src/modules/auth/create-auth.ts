@@ -56,6 +56,38 @@ async function createPersonalOrganization(
  * client, validated config, and email pipeline, and adds the organization behaviour the product
  * needs. Kept as a pure function so its hooks can be unit-tested without standing up NestJS.
  */
+/**
+ * Only providers with both halves of their credentials are registered; the config schema refuses a
+ * half-configured pair, so anything missing here is deliberately absent.
+ */
+function socialProviders(env: CreateAuthOptions['env']) {
+  return {
+    ...(env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET
+      ? {
+          github: {
+            clientId: env.GITHUB_CLIENT_ID,
+            clientSecret: env.GITHUB_CLIENT_SECRET,
+          },
+        }
+      : {}),
+    ...(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET
+      ? {
+          google: {
+            clientId: env.GOOGLE_CLIENT_ID,
+            clientSecret: env.GOOGLE_CLIENT_SECRET,
+            // Shared machines otherwise reuse whichever Google account signed in last.
+            prompt: 'select_account' as const,
+          },
+        }
+      : {}),
+  };
+}
+
+/** The providers this deployment can actually sign in with, for the web app to render buttons. */
+export function enabledSocialProviders(env: CreateAuthOptions['env']): string[] {
+  return Object.keys(socialProviders(env));
+}
+
 export function createAuth({ env, prisma, enqueueEmail }: CreateAuthOptions) {
   return betterAuth({
     secret: env.BETTER_AUTH_SECRET,
@@ -63,10 +95,36 @@ export function createAuth({ env, prisma, enqueueEmail }: CreateAuthOptions) {
     basePath: '/api/v1/auth',
     trustedOrigins: env.CORS_ORIGINS,
     database: prismaAdapter(prisma, { provider: 'postgresql' }),
+    socialProviders: socialProviders(env),
+    account: {
+      accountLinking: {
+        // Signing in with a provider joins an existing account instead of making a second one —
+        // but only when the provider asserts a VERIFIED email that matches an already-verified
+        // local address. No provider is listed as trusted, because trusting one would let an
+        // unverified provider email take over an account by claiming its address, and
+        // `requireLocalEmailVerified` (default true) keeps the local side honest too. Linking a
+        // different address is a deliberate act from settings, never implicit.
+        enabled: true,
+        trustedProviders: [],
+      },
+    },
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: true,
       minPasswordLength: MIN_PASSWORD_LENGTH,
+    },
+    user: {
+      changeEmail: {
+        enabled: true,
+        // The confirmation goes to the address already on file, never to the new one: a stolen
+        // session then cannot move an account to an address the attacker controls without also
+        // holding the original inbox. Better Auth only takes this path when the current address
+        // is verified; an unverified one falls back to verifying the new address instead, which
+        // is the same bar as signing up with it.
+        sendChangeEmailConfirmation: async ({ user, newEmail, url }) => {
+          await enqueueEmail({ type: 'email-change', to: user.email, newEmail, url });
+        },
+      },
     },
     emailVerification: {
       // Fire-and-forget on the queue: the request never waits on SMTP, and a slow mailer cannot

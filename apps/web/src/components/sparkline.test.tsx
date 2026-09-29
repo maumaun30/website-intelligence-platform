@@ -32,13 +32,36 @@ describe('Sparkline', () => {
     expect(screen.getByRole('cell', { name: '80' })).toBeInTheDocument();
   });
 
-  it('draws a lone marker for a single point and nothing for none', () => {
+  it('says a single audit is not a trend yet, rather than drawing a lone dot', () => {
     const single = render(<Sparkline points={[points[0]!]} label="Health score" />);
-    expect(single.container.querySelector('polyline')).toBeNull();
-    expect(single.container.querySelectorAll('[data-latest="true"]')).toHaveLength(1);
-    single.unmount();
 
+    expect(single.container.querySelector('polyline')).toBeNull();
+    expect(single.container.querySelector('[data-latest="true"]')).toBeNull();
+    expect(
+      screen.getByText('First audit, on Sep 1. The trend appears after the next scan.'),
+    ).toBeInTheDocument();
+    // The value is still readable to a screen reader.
+    expect(screen.getByRole('cell', { name: '40' })).toBeInTheDocument();
+  });
+
+  it('draws nothing at all when there are no audits', () => {
     const empty = render(<Sparkline points={[]} label="Health score" />);
-    expect(empty.container.querySelector('svg')).toBeNull();
+
+    expect(empty.container).toBeEmptyDOMElement();
+  });
+
+  it('prints one date in the caption when every audit landed on the same day', () => {
+    const { container } = render(
+      <Sparkline
+        points={[
+          { label: 'Sep 1', value: 40 },
+          { label: 'Sep 1', value: 55 },
+        ]}
+        label="Health score"
+      />,
+    );
+
+    // The visually hidden table still lists both points; only the caption collapses.
+    expect(container.querySelector('figcaption')?.textContent).toBe('Sep 1');
   });
 });

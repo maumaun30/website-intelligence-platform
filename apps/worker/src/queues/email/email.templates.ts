@@ -15,6 +15,14 @@ export function renderEmail(job: EmailJob): OutgoingEmail {
         subject: 'Verify your email address',
         text: `Welcome to the Website Intelligence Platform.\n\nConfirm your email address to finish signing up:\n\n${job.url}\n\nIf you did not create an account, you can ignore this message.\n`,
       };
+    case 'email-change':
+      // The approval goes to the address on file, so a stolen session cannot move an account to
+      // an attacker's address without access to the original inbox.
+      return {
+        to: job.to,
+        subject: 'Confirm your new email address',
+        text: `A request was made to change the email address on your Website Intelligence Platform account to ${job.newEmail}.\n\nApprove the change:\n\n${job.url}\n\nIf you did not ask for this, ignore this message and your address stays as it is.\n`,
+      };
     case 'invitation':
       return {
         to: job.to,

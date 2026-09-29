@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { PlanCards } from '@/components/plan-cards';
+import { PlanCardsSkeleton, SectionsSkeleton } from '@/components/skeletons';
 import { UsageBar } from '@/components/usage-bar';
 import { SubscriptionBanner } from '@/components/subscription-banner';
 import { refusalMessage } from '@/lib/billing-messages';
@@ -137,7 +138,10 @@ export default function BillingPage() {
       ) : null}
 
       {billing.isPending ? (
-        <p className="text-sm text-muted-foreground">Loading your plan…</p>
+        <div className="flex flex-col gap-5" aria-busy="true">
+          <SectionsSkeleton sections={1} label="Loading your plan" />
+          <PlanCardsSkeleton />
+        </div>
       ) : billing.isError ? (
         <p className="text-sm text-destructive">Could not load your plan.</p>
       ) : (

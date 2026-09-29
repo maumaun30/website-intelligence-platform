@@ -123,6 +123,42 @@
 
   /* 160 ms for controls, 240 ms for panels. */
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* Overshoots a little; used only where something arrives, never where it merely changes. */
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --animate-sheen: sheen 1.6s infinite;
+  --animate-rise: rise 0.26s var(--ease-spring) both;
+  --animate-fade: fade 0.18s var(--ease-out) both;
+}
+
+/* Every animation below moves only transform and opacity, so none of them can cause a reflow. */
+@keyframes sheen {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @layer base {
@@ -133,6 +169,44 @@
   /* Scores and counts are polled, so every number is tabular to stop them jittering. */
   .tnum {
     font-variant-numeric: tabular-nums;
+  }
+}
+
+@utility animate-sheen {
+  position: absolute;
+  inset: 0;
+  content: '';
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklch, var(--card) 65%, transparent),
+    transparent
+  );
+  animation: var(--animate-sheen);
+}
+
+/* Children arrive one after another. The delay is capped so a long list never crawls. */
+@utility stagger {
+  & > * {
+    animation: var(--animate-rise);
+  }
+  & > *:nth-child(1) {
+    animation-delay: 0ms;
+  }
+  & > *:nth-child(2) {
+    animation-delay: 40ms;
+  }
+  & > *:nth-child(3) {
+    animation-delay: 80ms;
+  }
+  & > *:nth-child(4) {
+    animation-delay: 120ms;
+  }
+  & > *:nth-child(5) {
+    animation-delay: 160ms;
+  }
+  & > *:nth-child(n + 6) {
+    animation-delay: 200ms;
   }
 }
 

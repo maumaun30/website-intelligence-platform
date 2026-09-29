@@ -28,4 +28,18 @@ describe('renderEmail', () => {
     expect(email.text).toContain('Ada');
     expect(email.text).toContain('http://localhost:3000/accept-invitation/xyz');
   });
+
+  it('asks the current address to approve an email change', () => {
+    const email = renderEmail({
+      type: 'email-change',
+      to: 'ada@wintel.test',
+      newEmail: 'ada@analytical.test',
+      url: 'http://localhost:3000/verify-email-change?token=abc',
+    });
+
+    expect(email.to).toBe('ada@wintel.test');
+    expect(email.subject).toBe('Confirm your new email address');
+    expect(email.text).toContain('ada@analytical.test');
+    expect(email.text).toContain('http://localhost:3000/verify-email-change?token=abc');
+  });
 });

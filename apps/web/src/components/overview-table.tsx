@@ -77,7 +77,7 @@ export function OverviewTable({ rows }: { rows: OverviewRow[] }) {
           We verify that you own it, crawl it, and give it a health score within a few minutes.
         </p>
         <Link
-          href="/dashboard/websites"
+          href="/dashboard/websites?add=1"
           className="mt-1 inline-flex h-10 items-center rounded-md bg-primary px-4.5 text-sm font-semibold text-primary-foreground transition-colors ease-out hover:bg-primary/90"
         >
           Add your first website
@@ -121,9 +121,12 @@ export function OverviewTable({ rows }: { rows: OverviewRow[] }) {
               </th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="stagger">
             {rows.map((row) => (
-              <tr key={row.websiteId} className="h-16 border-t border-border hover:bg-background">
+              <tr
+                key={row.websiteId}
+                className="h-16 border-t border-border transition-colors duration-150 ease-out hover:bg-background"
+              >
                 <td className="px-6">
                   <div className="flex items-center gap-3">
                     <span

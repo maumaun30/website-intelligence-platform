@@ -7,7 +7,7 @@ import { type FormEvent, useState } from 'react';
 import { useCreateWebsite } from '@/lib/use-websites';
 
 /** Registers a website under the caller's active organization. Validation mirrors the API contract. */
-export function AddWebsiteForm() {
+export function AddWebsiteForm({ onCreated }: { onCreated?: () => void } = {}) {
   const create = useCreateWebsite();
   const [error, setError] = useState<string | null>(null);
   const limitReached = create.error?.code === 'PLAN_WEBSITE_LIMIT';
@@ -28,7 +28,12 @@ export function AddWebsiteForm() {
     }
 
     const formElement = event.currentTarget;
-    create.mutate(parsed.data, { onSuccess: () => formElement.reset() });
+    create.mutate(parsed.data, {
+      onSuccess: () => {
+        formElement.reset();
+        onCreated?.();
+      },
+    });
   }
 
   return (

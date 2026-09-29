@@ -162,3 +162,31 @@ describe('stripe configuration', () => {
     expect(env.STRIPE_PRICE_PRO).toBe('price_pro');
   });
 });
+
+describe('social sign-in configuration', () => {
+  it('leaves every provider off when nothing is configured', () => {
+    const env = loadEnv(apiEnvSchema, validApi);
+
+    expect(env.GITHUB_CLIENT_ID).toBeUndefined();
+    expect(env.GOOGLE_CLIENT_ID).toBeUndefined();
+  });
+
+  it('accepts a provider whose id and secret are both present', () => {
+    const env = loadEnv(apiEnvSchema, {
+      ...validApi,
+      GITHUB_CLIENT_ID: 'gh-id',
+      GITHUB_CLIENT_SECRET: 'gh-secret',
+    });
+
+    expect(env.GITHUB_CLIENT_ID).toBe('gh-id');
+  });
+
+  it('refuses a half-configured provider rather than dropping it silently', () => {
+    expect(() => loadEnv(apiEnvSchema, { ...validApi, GOOGLE_CLIENT_ID: 'only-the-id' })).toThrow(
+      /GOOGLE_CLIENT_SECRET/,
+    );
+    expect(() =>
+      loadEnv(apiEnvSchema, { ...validApi, GITHUB_CLIENT_SECRET: 'only-the-secret' }),
+    ).toThrow(/GITHUB_CLIENT_ID/);
+  });
+});
