@@ -1,5 +1,7 @@
 import { type ScoreBand, scoreBand } from '@wintel/types';
 
+import { AnimatedNumber } from '@/components/animated-number';
+
 const BAND: Record<ScoreBand, { word: string; className: string; dot: string }> = {
   good: {
     word: 'Good',
@@ -43,9 +45,12 @@ const SIZES = {
 export function ScoreBadge({
   score,
   size = 'md',
+  animate = false,
 }: {
   score: number | null;
   size?: keyof typeof SIZES;
+  /** Counts to a new score instead of snapping. For one prominent score, not a table of them. */
+  animate?: boolean;
 }) {
   const band = scoreBand(score);
   if (score === null || band === null) {
@@ -54,7 +59,7 @@ export function ScoreBadge({
   return (
     <span className="flex items-center gap-2.5" aria-label={`Health ${score}, ${BAND[band].word}`}>
       <span aria-hidden="true" className={`tnum ${SIZES[size]}`}>
-        {score}
+        {animate ? <AnimatedNumber value={score} /> : score}
       </span>
       <span aria-hidden="true">
         <BandPill band={band} />

@@ -13,6 +13,7 @@ import { useState } from 'react';
 import { AiExplanation } from '@/components/ai-explanation';
 import { AuditChanges } from '@/components/audit-changes';
 import { AuditRuleGroup } from '@/components/audit-rule-group';
+import { RuleRowsSkeleton } from '@/components/skeletons';
 import { isActiveAudit, useAudit, useRerunAudit } from '@/lib/use-audits';
 
 const STATUS_VARIANT: Record<AuditStatus, 'default' | 'success' | 'destructive' | 'outline'> = {
@@ -37,7 +38,7 @@ export function AuditSection({ scanId }: { scanId: string }) {
   const active = isActiveAudit(audit);
 
   if (isPending) {
-    return <p className="text-sm text-muted-foreground">Loading audit…</p>;
+    return <RuleRowsSkeleton />;
   }
 
   if (isError) {
@@ -170,12 +171,12 @@ export function AuditSection({ scanId }: { scanId: string }) {
                     Open a rule to read what it means for this site and how to fix it.
                   </p>
                 ) : (
-                  <>
+                  <div key={openRuleId} className="animate-fade flex flex-col gap-4">
                     <h5 className="text-lg leading-snug font-semibold tracking-[-0.01em]">
                       {AUDIT_RULES[openRuleId].title}
                     </h5>
                     <AiExplanation scanId={scanId} ruleId={openRuleId} />
-                  </>
+                  </div>
                 )}
               </aside>
             </div>
