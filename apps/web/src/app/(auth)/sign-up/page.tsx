@@ -1,5 +1,7 @@
 import Link from 'next/link';
 
+import { SocialSignIn } from '@/components/social-sign-in';
+
 import { SignUpForm } from '@/components/sign-up-form';
 
 export default function SignUpPage() {
@@ -9,6 +11,8 @@ export default function SignUpPage() {
         <h1 className="text-[22px] font-semibold tracking-[-0.015em]">Create your account</h1>
         <p className="text-sm text-muted-foreground">Your first site is free. No card needed.</p>
       </header>
+
+      <SocialSignIn />
 
       <SignUpForm />
 

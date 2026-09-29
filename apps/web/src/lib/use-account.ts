@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { authClient } from './auth-client';
+import { getAuthProviders } from './auth-providers-client';
 import { getMe } from './me-client';
 
 /** Better Auth returns `{ data, error }` rather than throwing, so every hook unwraps it here. */
@@ -124,4 +125,29 @@ export function useRemoveMember() {
 
 export function useMe() {
   return useQuery({ queryKey: ['account', 'me'], queryFn: () => getMe() });
+}
+
+export function useAuthProviders() {
+  return useQuery({
+    queryKey: ['auth-providers'],
+    queryFn: () => getAuthProviders(),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+}
+
+export function useLinkedAccounts() {
+  return useQuery({
+    queryKey: ['account', 'linked'],
+    queryFn: async () => unwrap(await authClient.listAccounts()),
+  });
+}
+
+export function useUnlinkAccount() {
+  const client = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: { providerId: string; accountId: string }) =>
+      unwrap(await authClient.unlinkAccount(input)),
+    onSuccess: () => client.invalidateQueries({ queryKey: ['account', 'linked'] }),
+  });
 }

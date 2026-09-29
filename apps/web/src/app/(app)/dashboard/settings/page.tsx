@@ -1,5 +1,6 @@
 'use client';
 
+import { LinkedAccounts } from '@/components/settings/linked-accounts';
 import { OrganizationSection } from '@/components/settings/organization-section';
 import { PasswordForm } from '@/components/settings/password-form';
 import { ProfileForm } from '@/components/settings/profile-form';
@@ -56,6 +57,10 @@ export default function SettingsPage() {
             description="Changing your password signs out every other session."
           >
             <PasswordForm />
+          </Section>
+
+          <Section title="Linked accounts" description="The ways this account can sign in.">
+            <LinkedAccounts />
           </Section>
 
           <Section title="Sessions" description="Everywhere this account is currently signed in.">

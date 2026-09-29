@@ -1,5 +1,7 @@
 import Link from 'next/link';
 
+import { SocialSignIn } from '@/components/social-sign-in';
+
 import { SignInForm } from '@/components/sign-in-form';
 
 export default function SignInPage() {
@@ -9,6 +11,8 @@ export default function SignInPage() {
         <h1 className="text-[22px] font-semibold tracking-[-0.015em]">Sign in</h1>
         <p className="text-sm text-muted-foreground">Welcome back.</p>
       </header>
+
+      <SocialSignIn />
 
       <SignInForm />
 
