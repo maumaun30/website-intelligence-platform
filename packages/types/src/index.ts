@@ -198,3 +198,5 @@ export type {
   ExplanationStatus,
   RequestExplanationInput,
 } from './explanations';
+
+export { isBlockedAddress, isBlockedHostname } from './network-guard';

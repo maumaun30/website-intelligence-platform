@@ -190,3 +190,15 @@ describe('social sign-in configuration', () => {
     ).toThrow(/GITHUB_CLIENT_ID/);
   });
 });
+
+describe('crawler network guard', () => {
+  it('keeps private scan targets off unless they are asked for', () => {
+    expect(loadEnv(workerEnvSchema, validInfra).ALLOW_PRIVATE_SCAN_TARGETS).toBe(false);
+  });
+
+  it('can be turned on for local development', () => {
+    const env = loadEnv(workerEnvSchema, { ...validInfra, ALLOW_PRIVATE_SCAN_TARGETS: 'true' });
+
+    expect(env.ALLOW_PRIVATE_SCAN_TARGETS).toBe(true);
+  });
+});
