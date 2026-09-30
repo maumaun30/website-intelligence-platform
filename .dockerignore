@@ -1,0 +1,17 @@
+# Anything not needed to install, build or run an image. Keeping this tight matters: the build
+# context is the repo root for every image, because pnpm workspaces need the lockfile and all
+# workspace packages present at install time.
+**/node_modules
+**/dist
+**/.next
+**/.turbo
+**/generated
+.git
+.github
+docs
+.env
+.env.*
+!.env.example
+**/*.test.ts
+**/*.test.tsx
+.superpowers
