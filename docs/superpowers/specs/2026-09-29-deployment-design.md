@@ -78,8 +78,9 @@ Railway's private network), `APP_URL=https://<domain>`.
 `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PRO`, `STRIPE_PRICE_AGENCY`, and — once the OAuth apps
 exist — `GITHUB_CLIENT_ID`/`SECRET` and `GOOGLE_CLIENT_ID`/`SECRET`.
 
-**worker:** `WORKER_CONCURRENCY`, `SMTP_HOST`/`PORT`/`FROM` (plus credentials once a real provider
-is chosen), `ANTHROPIC_API_KEY`, `AI_EXPLANATION_PROVIDER=anthropic`.
+**worker:** `WORKER_CONCURRENCY`, `EMAIL_PROVIDER=resend`, `RESEND_API_KEY`, `SMTP_FROM` (the
+sender, whose domain must be verified with Resend), `ANTHROPIC_API_KEY`,
+`AI_EXPLANATION_PROVIDER=anthropic`, and `ALLOW_PRIVATE_SCAN_TARGETS=false`.
 
 **web (build arg):** `NEXT_PUBLIC_API_URL=https://api.<domain>`.
 
@@ -101,8 +102,9 @@ These are not optional polish; each one is a way the deployment can hurt someone
    stored pages. Before any public sign-up: resolve the hostname first, refuse loopback, private,
    link-local and unique-local ranges, refuse non-`http(s)` schemes, and re-check after every
    redirect. Verification fetches need the same guard.
-2. **Email has no real provider.** SMTP still points at the local Mailpit container, so
-   verification, invitation and email-change messages would vanish. **Open:** which provider.
+2. ~~**Email has no real provider.**~~ Resolved: `EMAIL_PROVIDER=resend` posts to Resend's HTTP
+   API, and the worker refuses to boot on that provider without a key. Production still needs the
+   key itself and a verified sending domain.
 3. **No error tracking.** A failed scan or webhook currently exists only in a log line nobody
    reads.
 
@@ -122,7 +124,6 @@ These are not optional polish; each one is a way the deployment can hurt someone
 ## Open questions
 
 - Domain name, and whether the API gets `api.<domain>` or a path on the same host.
-- Transactional email provider (Resend, Postmark, SES) — needed before anyone can verify an email.
 - Backups: Railway's Postgres snapshots, or a scheduled dump somewhere else.
 - Error tracking, if any (Sentry is the obvious fit and costs nothing at this size).
 - Whether a staging environment comes now or later.
