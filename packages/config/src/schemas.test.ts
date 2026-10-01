@@ -202,3 +202,31 @@ describe('crawler network guard', () => {
     expect(env.ALLOW_PRIVATE_SCAN_TARGETS).toBe(true);
   });
 });
+
+describe('email provider', () => {
+  it('delivers over SMTP by default, so local development needs no configuration', () => {
+    const env = loadEnv(workerEnvSchema, validInfra);
+
+    expect(env.EMAIL_PROVIDER).toBe('smtp');
+    expect(env.SMTP_HOST).toBe('localhost');
+    expect(env.SMTP_PORT).toBe(1025);
+  });
+
+  it('refuses to boot on the resend provider without a key, rather than dropping mail', () => {
+    expect(() => loadEnv(workerEnvSchema, { ...validInfra, EMAIL_PROVIDER: 'resend' })).toThrow(
+      /RESEND_API_KEY/,
+    );
+  });
+
+  it('accepts the resend provider once it has a key', () => {
+    const env = loadEnv(workerEnvSchema, {
+      ...validInfra,
+      EMAIL_PROVIDER: 'resend',
+      RESEND_API_KEY: 're_test_key',
+      SMTP_FROM: 'Wintel <no-reply@wintel.app>',
+    });
+
+    expect(env.EMAIL_PROVIDER).toBe('resend');
+    expect(env.SMTP_FROM).toBe('Wintel <no-reply@wintel.app>');
+  });
+});

@@ -39,11 +39,28 @@ export const authEnvSchema = z.object({
  * SMTP transport for transactional email. Only the worker sends mail; the defaults target the
  * local Mailpit container so `pnpm dev` works with no extra configuration.
  */
-export const smtpEnvSchema = z.object({
-  SMTP_HOST: z.string().min(1).default('localhost'),
-  SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(1025),
-  SMTP_FROM: z.string().min(1).default('Website Intelligence <no-reply@wintel.local>'),
-});
+export const smtpEnvSchema = z
+  .object({
+    /**
+     * `smtp` is the default so `pnpm dev` keeps delivering into the local Mailpit container with
+     * no configuration. `resend` posts to Resend's HTTP API instead, which is what production
+     * uses: hosts commonly block outbound SMTP, and an HTTP failure says why.
+     */
+    EMAIL_PROVIDER: z.enum(['smtp', 'resend']).default('smtp'),
+    SMTP_HOST: z.string().min(1).default('localhost'),
+    SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(1025),
+    SMTP_FROM: z.string().min(1).default('Website Intelligence <no-reply@wintel.local>'),
+    RESEND_API_KEY: z.string().min(1).optional(),
+  })
+  .superRefine((env, ctx) => {
+    if (env.EMAIL_PROVIDER === 'resend' && env.RESEND_API_KEY === undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['RESEND_API_KEY'],
+        message: 'RESEND_API_KEY is required when EMAIL_PROVIDER is "resend"',
+      });
+    }
+  });
 
 /** AI explanations are off unless explicitly enabled; the API refuses requests while off. */
 export const aiApiEnvSchema = z.object({
@@ -154,21 +171,22 @@ export const apiEnvSchema = z
   .and(stripeApiEnvSchema)
   .and(oauthApiEnvSchema);
 
-export const workerEnvSchema = z.object({
-  ...baseEnvSchema.shape,
-  ...databaseEnvSchema.shape,
-  ...redisEnvSchema.shape,
-  ...appEnvSchema.shape,
-  ...smtpEnvSchema.shape,
-  ...aiWorkerEnvSchema.shape,
-  WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(100).default(5),
-  /**
-   * Lets the crawler reach loopback and private addresses. Development only: it exists so a test
-   * site on localhost can be scanned. In production it must stay false, or a user can point a
-   * website at an internal address and read the response back out of the stored scan.
-   */
-  ALLOW_PRIVATE_SCAN_TARGETS: z.stringbool().default(false),
-});
+export const workerEnvSchema = z
+  .object({
+    ...baseEnvSchema.shape,
+    ...databaseEnvSchema.shape,
+    ...redisEnvSchema.shape,
+    ...appEnvSchema.shape,
+    ...aiWorkerEnvSchema.shape,
+    WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(100).default(5),
+    /**
+     * Lets the crawler reach loopback and private addresses. Development only: it exists so a test
+     * site on localhost can be scanned. In production it must stay false, or a user can point a
+     * website at an internal address and read the response back out of the stored scan.
+     */
+    ALLOW_PRIVATE_SCAN_TARGETS: z.stringbool().default(false),
+  })
+  .and(smtpEnvSchema);
 
 export type BaseEnv = z.infer<typeof baseEnvSchema>;
 export type AppEnv = z.infer<typeof appEnvSchema>;
