@@ -1,4 +1,4 @@
-import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { Processor } from '@nestjs/bullmq';
 import { Inject } from '@nestjs/common';
 import type { Prisma } from '@wintel/database';
 import {
@@ -13,6 +13,7 @@ import {
 import type { Job } from 'bullmq';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 
+import { ReportingWorkerHost } from '../../infrastructure/observability/reporting-worker-host';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { ISSUE_INSERT_BATCH } from './audit.constants';
 import { ownPages } from './audit-context';
@@ -28,7 +29,7 @@ const REPLACE_TIMEOUT_MS = 60_000;
  * changed since the website's previous completed audit. Failures mark the audit `failed` and rethrow.
  */
 @Processor(SCAN_AUDIT_QUEUE)
-export class ScanAuditProcessor extends WorkerHost {
+export class ScanAuditProcessor extends ReportingWorkerHost {
   constructor(
     private readonly prisma: PrismaService,
     @Inject(AUDIT_CONTEXT_LOADER) private readonly loadContext: AuditContextLoaderFn,

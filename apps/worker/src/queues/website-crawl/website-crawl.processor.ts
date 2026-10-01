@@ -1,9 +1,10 @@
-import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { Processor } from '@nestjs/bullmq';
 import { Inject } from '@nestjs/common';
 import { WEBSITE_CRAWL_QUEUE, type WebsiteCrawlJob, websiteCrawlJobSchema } from '@wintel/types';
 import type { Job } from 'bullmq';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 
+import { ReportingWorkerHost } from '../../infrastructure/observability/reporting-worker-host';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { ScanAuditQueueService } from '../scan-audit/scan-audit-queue.service';
 import type { CrawlResult, CrawlSink } from './crawl-runner';
@@ -22,7 +23,7 @@ export type CrawlRunnerFactory = (sink: CrawlSink) => {
  * before marking the scan completed — so a completed scan always has one — then enqueues it.
  */
 @Processor(WEBSITE_CRAWL_QUEUE)
-export class WebsiteCrawlProcessor extends WorkerHost {
+export class WebsiteCrawlProcessor extends ReportingWorkerHost {
   constructor(
     private readonly prisma: PrismaService,
     @Inject(CRAWL_RUNNER_FACTORY) private readonly createRunner: CrawlRunnerFactory,

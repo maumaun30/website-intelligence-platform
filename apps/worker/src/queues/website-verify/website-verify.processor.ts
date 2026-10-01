@@ -1,4 +1,4 @@
-import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { Processor } from '@nestjs/bullmq';
 import {
   WEBSITE_VERIFY_QUEUE,
   type WebsiteVerifyJob,
@@ -8,6 +8,7 @@ import {
 import type { Job } from 'bullmq';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 
+import { ReportingWorkerHost } from '../../infrastructure/observability/reporting-worker-host';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { DnsVerificationStrategy } from './dns-strategy';
 import { MetaVerificationStrategy } from './meta-strategy';
@@ -20,7 +21,7 @@ import type { VerificationStrategy } from './verification-strategy';
  * completed check that did not find the token is a normal `failed` outcome, not an error.
  */
 @Processor(WEBSITE_VERIFY_QUEUE)
-export class WebsiteVerifyProcessor extends WorkerHost {
+export class WebsiteVerifyProcessor extends ReportingWorkerHost {
   constructor(
     private readonly prisma: PrismaService,
     private readonly dnsStrategy: DnsVerificationStrategy,

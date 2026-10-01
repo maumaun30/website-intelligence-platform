@@ -72,13 +72,13 @@ than the first request that needs it.
 **Shared:** `NODE_ENV=production`, `LOG_LEVEL=info`, `DATABASE_URL`, `REDIS_URL` (both from
 Railway's private network), `APP_URL=https://<domain>`.
 
-**api:** `PORT`, `BETTER_AUTH_SECRET` (fresh, 32+ chars, not the development one),
+**api:** `PORT`, `SENTRY_DSN`, `SENTRY_ENVIRONMENT`, `BETTER_AUTH_SECRET` (fresh, 32+ chars, not the development one),
 `BETTER_AUTH_URL=https://api.<domain>`, `CORS_ORIGINS=https://<domain>`,
 `AI_EXPLANATIONS_ENABLED`, `STRIPE_PROVIDER=stripe`, `STRIPE_SECRET_KEY`,
 `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PRO`, `STRIPE_PRICE_AGENCY`, and — once the OAuth apps
 exist — `GITHUB_CLIENT_ID`/`SECRET` and `GOOGLE_CLIENT_ID`/`SECRET`.
 
-**worker:** `WORKER_CONCURRENCY`, `EMAIL_PROVIDER=resend`, `RESEND_API_KEY`, `SMTP_FROM` (the
+**worker:** `WORKER_CONCURRENCY`, `SENTRY_DSN`, `SENTRY_ENVIRONMENT`, `EMAIL_PROVIDER=resend`, `RESEND_API_KEY`, `SMTP_FROM` (the
 sender, whose domain must be verified with Resend), `ANTHROPIC_API_KEY`,
 `AI_EXPLANATION_PROVIDER=anthropic`, and `ALLOW_PRIVATE_SCAN_TARGETS=false`.
 
@@ -105,8 +105,9 @@ These are not optional polish; each one is a way the deployment can hurt someone
 2. ~~**Email has no real provider.**~~ Resolved: `EMAIL_PROVIDER=resend` posts to Resend's HTTP
    API, and the worker refuses to boot on that provider without a key. Production still needs the
    key itself and a verified sending domain.
-3. **No error tracking.** A failed scan or webhook currently exists only in a log line nobody
-   reads.
+3. ~~**No error tracking.**~~ Resolved: Sentry reports the API's 5xx responses and any worker job
+   that exhausts its retries, and stays off entirely without a DSN. Production still needs the DSN
+   itself. The web app is not wired up yet — see below.
 
 ## Rollout
 
@@ -125,5 +126,6 @@ These are not optional polish; each one is a way the deployment can hurt someone
 
 - Domain name, and whether the API gets `api.<domain>` or a path on the same host.
 - Backups: Railway's Postgres snapshots, or a scheduled dump somewhere else.
-- Error tracking, if any (Sentry is the obvious fit and costs nothing at this size).
+- Browser error tracking for the web app. The server side is done; `@sentry/nextjs` needs its own
+  config files and a source-map upload token, so it was left for its own change.
 - Whether a staging environment comes now or later.
