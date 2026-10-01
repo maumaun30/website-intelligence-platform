@@ -247,3 +247,15 @@ describe('error tracking', () => {
     ).toBe('production');
   });
 });
+
+describe('session cookie scope', () => {
+  it('is host-only by default, which is right for localhost', () => {
+    expect(loadEnv(apiEnvSchema, validApi).AUTH_COOKIE_DOMAIN).toBeUndefined();
+  });
+
+  it('can be widened to a registrable domain for a split web and API deployment', () => {
+    const env = loadEnv(apiEnvSchema, { ...validApi, AUTH_COOKIE_DOMAIN: '.wintel.app' });
+
+    expect(env.AUTH_COOKIE_DOMAIN).toBe('.wintel.app');
+  });
+});

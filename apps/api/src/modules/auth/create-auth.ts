@@ -94,6 +94,20 @@ export function createAuth({ env, prisma, enqueueEmail }: CreateAuthOptions) {
     baseURL: env.BETTER_AUTH_URL,
     basePath: '/api/v1/auth',
     trustedOrigins: env.CORS_ORIGINS,
+    advanced: {
+      /**
+       * In production the web app and the API are different hostnames — `wintel.app` and
+       * `api.wintel.app` — and a host-only cookie set by the API is never sent to the web app, so
+       * nobody stays signed in. Scoping the cookie to the registrable domain fixes that.
+       *
+       * It only applies when a domain is configured. Locally both sides are `localhost`, where a
+       * host-only cookie is already correct, and a platform domain like `up.railway.app` cannot
+       * be used at all: it is on the Public Suffix List, so browsers refuse a cookie scoped to it.
+       */
+      crossSubDomainCookies: env.AUTH_COOKIE_DOMAIN
+        ? { enabled: true, domain: env.AUTH_COOKIE_DOMAIN }
+        : { enabled: false },
+    },
     database: prismaAdapter(prisma, { provider: 'postgresql' }),
     socialProviders: socialProviders(env),
     account: {
