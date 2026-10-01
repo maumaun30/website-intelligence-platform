@@ -20,6 +20,7 @@
     "@nestjs/common": "^11.1.0",
     "@nestjs/core": "^11.1.0",
     "@nestjs/platform-express": "^11.1.0",
+    "@sentry/node": "^10.75.3",
     "@wintel/config": "workspace:*",
     "@wintel/database": "workspace:*",
     "@wintel/types": "workspace:*",

@@ -1,4 +1,4 @@
-import { InjectQueue, Processor, WorkerHost } from '@nestjs/bullmq';
+import { InjectQueue, Processor } from '@nestjs/bullmq';
 import {
   ACTIVE_SCAN_STATUSES,
   SCAN_SCHEDULER_QUEUE,
@@ -13,6 +13,7 @@ import {
 import { Queue } from 'bullmq';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 
+import { ReportingWorkerHost } from '../../infrastructure/observability/reporting-worker-host';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 
 type DueWebsite = Awaited<ReturnType<ScanSchedulerProcessor['findDue']>>[number];
@@ -30,7 +31,7 @@ export interface TickSummary {
  * produces a burst of catch-up scans. Start rules are the shared `evaluateScanStart`.
  */
 @Processor(SCAN_SCHEDULER_QUEUE)
-export class ScanSchedulerProcessor extends WorkerHost {
+export class ScanSchedulerProcessor extends ReportingWorkerHost {
   constructor(
     private readonly prisma: PrismaService,
     @InjectQueue(WEBSITE_CRAWL_QUEUE) private readonly crawlQueue: Queue<WebsiteCrawlJob>,

@@ -62,6 +62,15 @@ export const smtpEnvSchema = z
     }
   });
 
+/**
+ * Error tracking. With no DSN the SDK is never initialised, which is what keeps development and
+ * CI from reporting anywhere. `SENTRY_ENVIRONMENT` separates production from a future staging.
+ */
+export const sentryEnvSchema = z.object({
+  SENTRY_DSN: z.string().min(1).optional(),
+  SENTRY_ENVIRONMENT: z.string().min(1).optional(),
+});
+
 /** AI explanations are off unless explicitly enabled; the API refuses requests while off. */
 export const aiApiEnvSchema = z.object({
   AI_EXPLANATIONS_ENABLED: z.stringbool().default(false),
@@ -157,6 +166,7 @@ export const apiEnvSchema = z
     ...appEnvSchema.shape,
     ...authEnvSchema.shape,
     ...aiApiEnvSchema.shape,
+    ...sentryEnvSchema.shape,
     PORT: z.coerce.number().int().min(1).max(65535).default(4000),
     CORS_ORIGINS: z
       .string()
@@ -178,6 +188,7 @@ export const workerEnvSchema = z
     ...redisEnvSchema.shape,
     ...appEnvSchema.shape,
     ...aiWorkerEnvSchema.shape,
+    ...sentryEnvSchema.shape,
     WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(100).default(5),
     /**
      * Lets the crawler reach loopback and private addresses. Development only: it exists so a test

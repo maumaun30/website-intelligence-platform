@@ -10,6 +10,8 @@ import {
 import type { Request, Response } from 'express';
 import { InjectPinoLogger, type PinoLogger } from 'nestjs-pino';
 
+import { captureException } from '../../infrastructure/observability/sentry';
+
 export interface ErrorResponseBody {
   statusCode: number;
   error: string;
@@ -73,6 +75,13 @@ export class AllExceptionsFilter implements ExceptionFilter {
         { err: exception, requestId: request.id, path: request.url },
         'Unhandled exception',
       );
+      // Only 5xx: a 4xx is this API refusing something on purpose, and reporting those would
+      // bury the crashes under quota refusals and bad input.
+      captureException(exception, {
+        requestId: request.id,
+        method: request.method,
+        path: request.url,
+      });
     }
 
     const body: ErrorResponseBody = {
