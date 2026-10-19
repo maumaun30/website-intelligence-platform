@@ -1,0 +1,127 @@
+# Production stack for a single droplet: api, worker, Postgres and Redis. The web app is on
+# Vercel, so it is not here. See docs/deploying-to-digitalocean.md.
+#
+#   cd deploy/droplet && docker compose pull && docker compose up -d
+#
+# The droplet already runs other things, so nothing here publishes a port to the world. Postgres
+# and Redis stay on the project network; the API listens on loopback only, for the host's reverse
+# proxy. Memory limits keep this stack from starving its neighbours.
+name: wintel-prod
+
+x-app: &app
+  env_file: .env
+  environment:
+    NODE_ENV: production
+    DATABASE_URL: postgresql://wintel:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/wintel?schema=public
+    REDIS_URL: redis://redis:6379
+  restart: unless-stopped
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: wintel
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: wintel
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U wintel -d wintel']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 384m
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # BullMQ needs `noeviction`: under any other policy a full Redis silently drops queued jobs.
+    command:
+      [
+        'redis-server',
+        '--appendonly',
+        'yes',
+        '--maxmemory',
+        '96mb',
+        '--maxmemory-policy',
+        'noeviction',
+      ]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+
+  # One-shot: brings the schema up to date, then exits. The api and worker wait for it, so a new
+  # revision never runs against an old schema, and only this container ever migrates.
+  migrate:
+    <<: *app
+    image: ghcr.io/maumaun30/wintel-api:${IMAGE_TAG:-latest}
+    restart: 'no'
+    command:
+      - node
+      - /app/packages/database/node_modules/prisma/build/index.js
+      - migrate
+      - deploy
+      - --schema=/app/packages/database/prisma/schema.prisma
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    <<: *app
+    image: ghcr.io/maumaun30/wintel-api:${IMAGE_TAG:-latest}
+    build:
+      context: ../..
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - '127.0.0.1:${API_HOST_PORT:-4000}:4000'
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://localhost:4000/api/v1/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 384m
+
+  worker:
+    <<: *app
+    image: ghcr.io/maumaun30/wintel-worker:${IMAGE_TAG:-latest}
+    build:
+      context: ../..
+      dockerfile: apps/worker/Dockerfile
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+volumes:
+  postgres-data:
+  redis-data:
