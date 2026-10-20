@@ -230,3 +230,20 @@ describe('email provider', () => {
     expect(env.SMTP_FROM).toBe('Wintel <no-reply@wintel.app>');
   });
 });
+
+describe('error tracking', () => {
+  it('stays off in both apps when no DSN is configured', () => {
+    expect(loadEnv(apiEnvSchema, validApi).SENTRY_DSN).toBeUndefined();
+    expect(loadEnv(workerEnvSchema, validInfra).SENTRY_DSN).toBeUndefined();
+  });
+
+  it('carries the DSN and environment through to both apps', () => {
+    const dsn = 'https://public@o1.ingest.sentry.io/2';
+
+    expect(loadEnv(apiEnvSchema, { ...validApi, SENTRY_DSN: dsn }).SENTRY_DSN).toBe(dsn);
+    expect(
+      loadEnv(workerEnvSchema, { ...validInfra, SENTRY_DSN: dsn, SENTRY_ENVIRONMENT: 'production' })
+        .SENTRY_ENVIRONMENT,
+    ).toBe('production');
+  });
+});

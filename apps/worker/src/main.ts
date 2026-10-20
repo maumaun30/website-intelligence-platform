@@ -3,11 +3,18 @@ import 'reflect-metadata';
 import { EnvValidationError, loadDotenv, loadEnv, workerEnvSchema } from '@wintel/config';
 
 import { createWorkerApp } from './create-worker';
+import { initSentry } from './infrastructure/observability/sentry';
 
 async function bootstrap(): Promise<void> {
   loadDotenv(['.env', '../../.env']);
 
   const env = loadEnv(workerEnvSchema);
+  initSentry({
+    dsn: env.SENTRY_DSN,
+    environment: env.SENTRY_ENVIRONMENT,
+    nodeEnv: env.NODE_ENV,
+    service: 'worker',
+  });
   const app = await createWorkerApp(env);
 
   await app.init();

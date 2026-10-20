@@ -1,8 +1,9 @@
-import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { Processor } from '@nestjs/bullmq';
 import { EMAIL_QUEUE, emailJobSchema } from '@wintel/types';
 import type { Job } from 'bullmq';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 
+import { ReportingWorkerHost } from '../../infrastructure/observability/reporting-worker-host';
 import { MailerService } from '../../infrastructure/mailer/mailer.service';
 import { renderEmail } from './email.templates';
 
@@ -12,7 +13,7 @@ import { renderEmail } from './email.templates';
  * BullMQ) rather than sending a broken email.
  */
 @Processor(EMAIL_QUEUE)
-export class EmailProcessor extends WorkerHost {
+export class EmailProcessor extends ReportingWorkerHost {
   constructor(
     private readonly mailer: MailerService,
     @InjectPinoLogger(EmailProcessor.name) private readonly logger: PinoLogger,

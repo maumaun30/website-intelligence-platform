@@ -1,7 +1,8 @@
-import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { Processor } from '@nestjs/bullmq';
 import type { Job } from 'bullmq';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 
+import { ReportingWorkerHost } from '../../infrastructure/observability/reporting-worker-host';
 import { RedisService } from '../../infrastructure/redis/redis.service';
 import {
   EXAMPLE_QUEUE,
@@ -16,7 +17,7 @@ import {
  * before a real queue (crawl, audit, report) depends on it. Delete it once one exists.
  */
 @Processor(EXAMPLE_QUEUE)
-export class ExampleProcessor extends WorkerHost {
+export class ExampleProcessor extends ReportingWorkerHost {
   constructor(
     private readonly redis: RedisService,
     @InjectPinoLogger(ExampleProcessor.name) private readonly logger: PinoLogger,

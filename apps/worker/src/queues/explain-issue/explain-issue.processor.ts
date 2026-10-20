@@ -1,4 +1,4 @@
-import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { Processor } from '@nestjs/bullmq';
 import { Inject } from '@nestjs/common';
 import type { Prisma } from '@wintel/database';
 import {
@@ -10,6 +10,7 @@ import {
 import { type Job, UnrecoverableError } from 'bullmq';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 
+import { ReportingWorkerHost } from '../../infrastructure/observability/reporting-worker-host';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import type { buildExplanationInput } from './explanation-input';
 import {
@@ -36,7 +37,7 @@ function isPermanent(error: unknown): boolean {
  * and fail on the final attempt.
  */
 @Processor(EXPLAIN_ISSUE_QUEUE)
-export class ExplainIssueProcessor extends WorkerHost {
+export class ExplainIssueProcessor extends ReportingWorkerHost {
   constructor(
     private readonly prisma: PrismaService,
     @Inject(EXPLANATION_GENERATOR) private readonly generator: ExplanationGenerator,
