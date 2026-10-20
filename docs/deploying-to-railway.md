@@ -110,7 +110,7 @@ Set the API service's **pre-deploy command** so the schema is current before the
 serves traffic:
 
 ```
-node /app/node_modules/prisma/build/index.js migrate deploy --schema=/app/packages/database/prisma/schema.prisma
+node /app/packages/database/node_modules/prisma/build/index.js migrate deploy --schema=/app/packages/database/prisma/schema.prisma
 ```
 
 Only the API runs this. Two services racing the same migration is how a schema ends up
