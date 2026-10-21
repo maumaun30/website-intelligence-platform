@@ -12,6 +12,7 @@ vi.mock('@/lib/auth-client', () => ({
   signIn: {
     email: (...args: unknown[]) => signInEmail(...args),
   },
+  verifiedCallbackURL: () => 'http://localhost:3000/sign-in?verified=1',
 }));
 
 import { SignInForm } from './sign-in-form';
@@ -46,7 +47,22 @@ describe('SignInForm', () => {
     expect(signInEmail).toHaveBeenCalledWith({
       email: 'user@example.com',
       password: 'secret123',
+      callbackURL: 'http://localhost:3000/sign-in?verified=1',
     });
+  });
+
+  it('sends an unverified user to check their inbox, where the API just mailed a new link', async () => {
+    signInEmail.mockResolvedValue({
+      error: { code: 'EMAIL_NOT_VERIFIED', message: 'Email not verified' },
+    });
+    render(<SignInForm />);
+    fill('user@example.com', 'secret123');
+    fireEvent.submit(screen.getByRole('button', { name: 'Sign in' }));
+
+    await waitFor(() =>
+      expect(push).toHaveBeenCalledWith('/verify?email=user%40example.com&resent=1'),
+    );
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it('surfaces the API error and stays on the page', async () => {
