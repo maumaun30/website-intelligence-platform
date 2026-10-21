@@ -1,5 +1,6 @@
+import { Logger } from '@nestjs/common';
 import type { Job } from 'bullmq';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest';
 
 const capture = vi.hoisted(() => vi.fn());
 vi.mock('./sentry', () => ({ captureException: capture }));
@@ -22,7 +23,18 @@ function job(attemptsMade: number, attempts = 3): Job {
   } as unknown as Job;
 }
 
-afterEach(() => capture.mockReset());
+let warn: MockInstance;
+let error: MockInstance;
+
+beforeEach(() => {
+  warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+  error = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+});
+
+afterEach(() => {
+  capture.mockReset();
+  vi.restoreAllMocks();
+});
 
 describe('ReportingWorkerHost', () => {
   it('stays quiet while BullMQ still has retries left', () => {
@@ -48,5 +60,33 @@ describe('ReportingWorkerHost', () => {
     new TestProcessor().onJobFailed(undefined, new Error('worker lost the job'));
 
     expect(capture).toHaveBeenCalled();
+  });
+
+  // Without Sentry configured, a log line is the only place a failure shows up at all.
+  it('logs a failed attempt that will be retried as a warning, with the reason', () => {
+    new TestProcessor().onJobFailed(job(1), new Error('Resend refused the message (422)'));
+
+    expect(warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queue: 'scan-audit',
+        jobId: 'j1',
+        attemptsMade: 1,
+        reason: 'Resend refused the message (422)',
+      }),
+    );
+    expect(error).not.toHaveBeenCalled();
+  });
+
+  it('logs the failure that exhausts the attempts as an error, with the reason', () => {
+    new TestProcessor().onJobFailed(job(3), new Error('Resend refused the message (422)'));
+
+    expect(error).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queue: 'scan-audit',
+        jobId: 'j1',
+        attemptsMade: 3,
+        reason: 'Resend refused the message (422)',
+      }),
+    );
   });
 });

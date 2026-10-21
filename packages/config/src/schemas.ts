@@ -42,6 +42,21 @@ export const authEnvSchema = z.object({
   AUTH_COOKIE_DOMAIN: z.string().min(1).optional(),
 });
 
+const DISPLAY_NAME_SENDER = /^(?<name>[^<>]+?)\s*<(?<address>[^<>\s]+)>$/;
+
+/**
+ * Whether a value is a sender the email providers accept: a bare address, or `Name <address>`.
+ * Checked at boot because a malformed sender fails every email at the provider while the worker
+ * looks healthy — and the usual cause, quotes typed around the value in a hosting dashboard, is
+ * invisible there.
+ */
+function isSenderAddress(value: string): boolean {
+  const named = DISPLAY_NAME_SENDER.exec(value);
+  const address = named?.groups?.address ?? value;
+
+  return z.email().safeParse(address).success;
+}
+
 /**
  * SMTP transport for transactional email. Only the worker sends mail; the defaults target the
  * local Mailpit container so `pnpm dev` works with no extra configuration.
@@ -56,7 +71,13 @@ export const smtpEnvSchema = z
     EMAIL_PROVIDER: z.enum(['smtp', 'resend']).default('smtp'),
     SMTP_HOST: z.string().min(1).default('localhost'),
     SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(1025),
-    SMTP_FROM: z.string().min(1).default('Website Intelligence <no-reply@wintel.local>'),
+    SMTP_FROM: z
+      .string()
+      .refine(isSenderAddress, {
+        message:
+          'SMTP_FROM must be "email@example.com" or "Name <email@example.com>", with no quotes around the whole value',
+      })
+      .default('Website Intelligence <no-reply@wintel.local>'),
     RESEND_API_KEY: z.string().min(1).optional(),
   })
   .superRefine((env, ctx) => {

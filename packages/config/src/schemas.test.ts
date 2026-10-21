@@ -231,6 +231,28 @@ describe('email provider', () => {
   });
 });
 
+describe('email sender', () => {
+  it.each([
+    'no-reply@wintel.app',
+    'Wintel <no-reply@wintel.app>',
+    '"Wintel" <no-reply@wintel.app>',
+  ])('accepts %s', (from) => {
+    expect(loadEnv(workerEnvSchema, { ...validInfra, SMTP_FROM: from }).SMTP_FROM).toBe(from);
+  });
+
+  // Each of these reached production once or could: a dashboard stores quotes literally, and the
+  // provider rejects every email while the app looks healthy. Failing at boot names the problem.
+  it.each([
+    '"Wintel <no-reply@wintel.app>"',
+    "'Wintel <no-reply@wintel.app>'",
+    'Wintel no-reply@wintel.app',
+    'Wintel <no-reply>',
+    'Wintel <no-reply@wintel.app',
+  ])('refuses to boot on %s', (from) => {
+    expect(() => loadEnv(workerEnvSchema, { ...validInfra, SMTP_FROM: from })).toThrow(/SMTP_FROM/);
+  });
+});
+
 describe('error tracking', () => {
   it('stays off in both apps when no DSN is configured', () => {
     expect(loadEnv(apiEnvSchema, validApi).SENTRY_DSN).toBeUndefined();
