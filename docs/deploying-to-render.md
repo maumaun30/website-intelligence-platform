@@ -17,9 +17,10 @@ This runbook uses `wintel.example.com` for the web app and `api.wintel.example.c
 - **The free Key Value is 25 MB and not persistent.** Plenty for queues at this size. A restart of the store
   loses whatever was queued.
   Queued jobs are retried by the user, not lost data: everything durable is in Postgres.
-- **Connections.** The two apps hold about 29 Redis connections between them (BullMQ opens one
-  per queue and two per worker). Render's free Key Value allows 50. Redis Cloud's free plan
-  allows 30, which is why it is not used here.
+- **Connections.** The two apps hold 11 Redis connections between them: queues share one per
+  app, and each worker adds a blocking one. A deploy runs the old and new instance side by side,
+  so budget for twice that against Render's free limit of 50. Before the connection was shared
+  it was 29, and overlapping deploys failed their health check on refused connections.
 - Free tiers change. Check the current limits when you sign up.
 
 ## 1. Supabase (Postgres)
