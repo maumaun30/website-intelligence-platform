@@ -74,6 +74,29 @@ describe('createAuth', () => {
     expect(verification).toMatchObject({ type: 'verification', to: email });
   });
 
+  it('sends a fresh verification email when an unverified user tries to sign in', async () => {
+    const email = `unverified-${randomUUID().slice(0, 8)}@wintel.test`;
+    createdEmails.push(email);
+    const password = 'correct-horse-battery';
+
+    await auth.api.signUpEmail({ body: { name: 'Ada Lovelace', email, password } });
+    enqueued.length = 0;
+
+    // The first email can be lost (bad inbox, misconfigured sender), and with no session there is
+    // nowhere else to ask for another: signing in is how an unverified user gets one.
+    await expect(
+      auth.api.signInEmail({
+        body: { email, password, callbackURL: 'http://localhost:3000/sign-in?verified=1' },
+      }),
+    ).rejects.toMatchObject({ body: { code: 'EMAIL_NOT_VERIFIED' } });
+
+    const verification = enqueued.find((job) => job.type === 'verification');
+    expect(verification).toMatchObject({ type: 'verification', to: email });
+    expect(verification?.url).toContain(
+      `callbackURL=${encodeURIComponent('http://localhost:3000/sign-in?verified=1')}`,
+    );
+  });
+
   it('asks the address on file to approve an email change', async () => {
     const changeEmail = auth.options.user?.changeEmail;
     expect(changeEmail?.enabled).toBe(true);

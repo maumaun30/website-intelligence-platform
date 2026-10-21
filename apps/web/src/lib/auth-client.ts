@@ -13,4 +13,12 @@ export const authClient = createAuthClient({
   plugins: [organizationClient()],
 });
 
-export const { signIn, signUp, signOut, useSession } = authClient;
+export const { signIn, signUp, signOut, useSession, sendVerificationEmail } = authClient;
+
+/**
+ * Where a verification link lands once confirmed. It has to be absolute: the link itself is served
+ * from the API's domain, so a relative path would redirect to the API rather than this app.
+ */
+export function verifiedCallbackURL(): string {
+  return `${window.location.origin}/sign-in?verified=1`;
+}

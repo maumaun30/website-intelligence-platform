@@ -5,7 +5,7 @@ import { Button, Input, Label } from '@wintel/ui';
 import { useRouter } from 'next/navigation';
 import { type FormEvent, useState } from 'react';
 
-import { signUp } from '@/lib/auth-client';
+import { signUp, verifiedCallbackURL } from '@/lib/auth-client';
 
 export function SignUpForm() {
   const router = useRouter();
@@ -33,6 +33,7 @@ export function SignUpForm() {
       name: parsed.data.name,
       email: parsed.data.email,
       password: parsed.data.password,
+      callbackURL: verifiedCallbackURL(),
     });
     setPending(false);
 

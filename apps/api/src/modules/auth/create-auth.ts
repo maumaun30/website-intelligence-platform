@@ -141,6 +141,9 @@ export function createAuth({ env, prisma, enqueueEmail }: CreateAuthOptions) {
       },
     },
     emailVerification: {
+      // An unverified user has no session, so signing in is the one place they can ask again
+      // after the first email went missing. The sign-in still fails; it just mails a new link.
+      sendOnSignIn: true,
       // Fire-and-forget on the queue: the request never waits on SMTP, and a slow mailer cannot
       // become a timing oracle for whether an address exists.
       sendVerificationEmail: async ({ user, url }) => {

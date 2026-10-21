@@ -5,7 +5,7 @@ import { Button, Input, Label } from '@wintel/ui';
 import { useRouter } from 'next/navigation';
 import { type FormEvent, useState } from 'react';
 
-import { signIn } from '@/lib/auth-client';
+import { signIn, verifiedCallbackURL } from '@/lib/auth-client';
 
 export function SignInForm() {
   const router = useRouter();
@@ -31,8 +31,16 @@ export function SignInForm() {
     const result = await signIn.email({
       email: parsed.data.email,
       password: parsed.data.password,
+      callbackURL: verifiedCallbackURL(),
     });
     setPending(false);
+
+    // The API has just mailed a fresh link (it does on every unverified sign-in), so this is not an
+    // error to show: it is the same "check your inbox" step as after signing up.
+    if (result.error?.code === 'EMAIL_NOT_VERIFIED') {
+      router.push(`/verify?email=${encodeURIComponent(parsed.data.email)}&resent=1`);
+      return;
+    }
 
     if (result.error) {
       setError(result.error.message ?? 'Could not sign in.');
