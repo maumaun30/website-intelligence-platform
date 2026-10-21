@@ -7,6 +7,7 @@ import { WorkerConfigModule } from './config/worker-config.module';
 import { GuardedFetchModule } from './infrastructure/network/guarded-fetch.module';
 import { MailerModule } from './infrastructure/mailer/mailer.module';
 import { PrismaModule } from './infrastructure/prisma/prisma.module';
+import { QueueConnection } from './infrastructure/redis/queue-connection';
 import { RedisModule } from './infrastructure/redis/redis.module';
 import { EmailModule } from './queues/email/email.module';
 import { ExampleModule } from './queues/example/example.module';
@@ -32,19 +33,17 @@ export class WorkerModule {
                 : undefined,
           },
         }),
-        BullModule.forRoot({
-          connection: {
-            url: env.REDIS_URL,
-            // BullMQ blocks on Redis commands and requires retries to be unlimited; any other
-            // value makes long-lived workers throw during normal blocking reads.
-            maxRetriesPerRequest: null,
-          },
-          defaultJobOptions: {
-            attempts: 3,
-            backoff: { type: 'exponential', delay: 2_000 },
-            removeOnComplete: { age: 3_600, count: 1_000 },
-            removeOnFail: { age: 24 * 3_600 },
-          },
+        BullModule.forRootAsync({
+          inject: [QueueConnection],
+          useFactory: (queueConnection: QueueConnection) => ({
+            connection: queueConnection.client,
+            defaultJobOptions: {
+              attempts: 3,
+              backoff: { type: 'exponential', delay: 2_000 },
+              removeOnComplete: { age: 3_600, count: 1_000 },
+              removeOnFail: { age: 24 * 3_600 },
+            },
+          }),
         }),
         GuardedFetchModule,
         RedisModule,

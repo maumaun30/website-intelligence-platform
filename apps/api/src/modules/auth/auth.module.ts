@@ -5,6 +5,7 @@ import { EMAIL_QUEUE } from '@wintel/types';
 
 import { API_ENV } from '../../config/api-config.module';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
+import { QueueConnection } from '../../infrastructure/redis/queue-connection';
 import { AuthProvidersController } from './auth-providers.controller';
 import { AUTH_INSTANCE } from './auth.tokens';
 import { type Auth, createAuth } from './create-auth';
@@ -24,14 +25,8 @@ export { AUTH_INSTANCE } from './auth.tokens';
 @Module({
   imports: [
     BullModule.forRootAsync({
-      inject: [API_ENV],
-      useFactory: (env: ApiEnv) => ({
-        connection: {
-          url: env.REDIS_URL,
-          // BullMQ blocks on Redis commands and requires retries to be unlimited.
-          maxRetriesPerRequest: null,
-        },
-      }),
+      inject: [QueueConnection],
+      useFactory: (queueConnection: QueueConnection) => ({ connection: queueConnection.client }),
     }),
     BullModule.registerQueue({ name: EMAIL_QUEUE }),
   ],
