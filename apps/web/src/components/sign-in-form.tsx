@@ -5,7 +5,7 @@ import { Button, Input, Label } from '@wintel/ui';
 import { useRouter } from 'next/navigation';
 import { type FormEvent, useState } from 'react';
 
-import { signIn, verifiedCallbackURL } from '@/lib/auth-client';
+import { signedInCallbackURL, signIn } from '@/lib/auth-client';
 
 export function SignInForm() {
   const router = useRouter();
@@ -31,7 +31,7 @@ export function SignInForm() {
     const result = await signIn.email({
       email: parsed.data.email,
       password: parsed.data.password,
-      callbackURL: verifiedCallbackURL(),
+      callbackURL: signedInCallbackURL(),
     });
     setPending(false);
 

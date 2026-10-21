@@ -22,3 +22,12 @@ export const { signIn, signUp, signOut, useSession, sendVerificationEmail } = au
 export function verifiedCallbackURL(): string {
   return `${window.location.origin}/sign-in?verified=1`;
 }
+
+/**
+ * The callbackURL for signing in. Better Auth's client navigates to it after a successful sign-in,
+ * so it is where a signed-in user belongs. For an unverified user the same URL ends up in the
+ * fresh verification link, which then leads to the dashboard and on to sign-in.
+ */
+export function signedInCallbackURL(): string {
+  return `${window.location.origin}/dashboard`;
+}

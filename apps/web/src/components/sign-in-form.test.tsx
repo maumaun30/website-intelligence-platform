@@ -12,7 +12,7 @@ vi.mock('@/lib/auth-client', () => ({
   signIn: {
     email: (...args: unknown[]) => signInEmail(...args),
   },
-  verifiedCallbackURL: () => 'http://localhost:3000/sign-in?verified=1',
+  signedInCallbackURL: () => 'http://localhost:3000/dashboard',
 }));
 
 import { SignInForm } from './sign-in-form';
@@ -47,7 +47,9 @@ describe('SignInForm', () => {
     expect(signInEmail).toHaveBeenCalledWith({
       email: 'user@example.com',
       password: 'secret123',
-      callbackURL: 'http://localhost:3000/sign-in?verified=1',
+      // Better Auth's client navigates to callbackURL after a successful sign-in, so it must be the
+      // destination: pointing it at /sign-in once bounced every sign-in straight back there.
+      callbackURL: 'http://localhost:3000/dashboard',
     });
   });
 
