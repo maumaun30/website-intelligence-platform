@@ -1,0 +1,61 @@
+# Render Blueprint: the api and worker as one free web service, plus a free Key Value (Redis) on
+# Render's private network. Postgres is external (Supabase): Render's free Postgres expires after
+# 30 days. See docs/deploying-to-render.md.
+services:
+  - type: web
+    name: wintel-api
+    runtime: docker
+    plan: free
+    region: singapore
+    branch: main
+    autoDeploy: true
+    dockerfilePath: ./deploy/render/Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: wintel-redis
+          property: connectionString
+      # Supabase's Session pooler string, with `?connection_limit=5` appended.
+      - key: DATABASE_URL
+        sync: false
+      - key: BETTER_AUTH_SECRET
+        generateValue: true
+      - key: APP_URL
+        sync: false
+      - key: BETTER_AUTH_URL
+        sync: false
+      - key: AUTH_COOKIE_DOMAIN
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: EMAIL_PROVIDER
+        value: resend
+      - key: RESEND_API_KEY
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: STRIPE_PROVIDER
+        value: fake
+      - key: AI_EXPLANATIONS_ENABLED
+        value: 'false'
+      # MUST stay false: with it on, anyone can scan an internal address and read the response.
+      - key: ALLOW_PRIVATE_SCAN_TARGETS
+        value: 'false'
+      - key: WORKER_CONCURRENCY
+        value: '2'
+      - key: SENTRY_ENVIRONMENT
+        value: production
+
+  - type: keyvalue
+    name: wintel-redis
+    plan: free
+    region: singapore
+    # BullMQ needs `noeviction`: under any other policy a full store silently drops queued jobs.
+    maxmemoryPolicy: noeviction
+    # Private network only.
+    ipAllowList: []

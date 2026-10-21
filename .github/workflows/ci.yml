@@ -111,6 +111,15 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Build combined server image (Render)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/render/Dockerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
       - name: Build web image
         uses: docker/build-push-action@v6
         with:
